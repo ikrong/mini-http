@@ -1,0 +1,4 @@
+/dist
+/server
+*.tar
+.DS_Store

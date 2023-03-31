@@ -1,0 +1,9 @@
+/generate
+/dist
+*.sh
+.git
+.gitignore
+*.html
+/assets
+/script
+!/assets/index.html
