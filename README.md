@@ -1,6 +1,6 @@
 ## 一个非常轻量的静态资源服务器
 
-这个静态服务器的主要目的就是为了部署静态资源，也只具有静态访问功能，不适用于接口开发或者接口重定向。
+这个静态服务器的主要目的就是为了部署静态资源，也只具有静态访问功能，不适用于接口开发或者资源重定向。
 
 项目地址：
 
@@ -10,6 +10,7 @@
 目前支持的功能如下
 
 - [x] 支持静态资源访问
+- [x] 单页面路由
 - [x] 支持端口自定义
 - [x] 支持https配置
 - [x] 支持多域名配置
@@ -51,7 +52,7 @@ docker run -ti --rm --init \
 ```shell
 docker run -ti --rm --init \
     -p 443:443 \
-    -v /localhost/cert/:/cert/
+    -v /localhost/cert/:/cert/ \
     ikrong/mini-http \
     /serve \
         --domain localhost \
@@ -85,7 +86,7 @@ docker run -ti --rm --init \
 ```shell
 docker run -ti --rm --init \
     -p 80:80 \
-    -v /res/:/html/
+    -v /res/:/html/ \
     ikrong/mini-http \
     /serve \
         --domain localhost \
@@ -99,5 +100,18 @@ docker run -ti --rm --init \
 > domain cert key root 这四个参数 domain 是必选，其他三个选填
 >
 > 可以设置多组，以支持多个域名多个静态资源
+
+6. 单页面应用
+
+```shell
+docker run -ti --rm --init \
+   -p 80:80 \
+   ikrong/mini-http \
+   /serve \
+     --domain localhost \
+     --mode history
+```
+
+> mode 参数设置为 history 可以让对应的 domain 支持单页面应用访问
 
 ## MIT LICENSE
