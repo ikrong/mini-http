@@ -114,4 +114,6 @@ docker run -ti --rm --init \
 
 > mode 参数设置为 history 可以让对应的 domain 支持单页面应用访问
 
-## MIT LICENSE
+## LICENSE
+
+MIT License
