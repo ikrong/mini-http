@@ -17,8 +17,8 @@ var (
 	httpsPort = flag.Int("https-port", 443, "HTTPS Port")
 	wwwRoot   = flag.String("root", "/www/", "WWW Root")
 	_         = flag.String("domain", "", "Domain")
-	_         = flag.String("cert", "", "Domain")
-	_         = flag.String("key", "", "Domain")
+	_         = flag.String("cert", "", "Domain Cert File")
+	_         = flag.String("key", "", "Domain Key File")
 	_         = flag.String("mode", "", "Can Be Set To 'history' to Support Web APP Routing")
 	domains   []DomainConfig
 )
@@ -56,7 +56,7 @@ func RunServer() {
 				GetCertificate: func(chi *tls.ClientHelloInfo) (*tls.Certificate, error) {
 					domain := CurrentDomain(&domains, chi.ServerName)
 					if domain == nil {
-						return nil, errors.New("No Certificate Found")
+						return nil, errors.New("no certificate found")
 					}
 					cert, err := tls.LoadX509KeyPair(domain.Cert, domain.Key)
 					if err != nil {
