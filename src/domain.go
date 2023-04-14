@@ -1,6 +1,9 @@
 package src
 
-import "os"
+import (
+	"os"
+	"strings"
+)
 
 type DomainConfig struct {
 	Domain string
@@ -17,7 +20,7 @@ func ParseDomains(wwwRoot string) (domains []DomainConfig) {
 			var key = os.Args[i]
 			switch {
 			case key == "--domain":
-				if domain != (DomainConfig{}) {
+				if domain != (DomainConfig{}) && domain.Domain != "" {
 					domains = append(domains, domain)
 				}
 				domain = DomainConfig{Domain: os.Args[i+1], Root: wwwRoot}
@@ -37,15 +40,16 @@ func ParseDomains(wwwRoot string) (domains []DomainConfig) {
 			}
 		}
 	}
-	if domain != (DomainConfig{}) {
+	if domain != (DomainConfig{}) && domain.Domain != "" {
 		domains = append(domains, domain)
 	}
 	return
 }
 
 func CurrentDomain(domains *[]DomainConfig, host string) (domain *DomainConfig) {
+	hostInfos := strings.Split(host, ":")
 	for i := 0; i < len(*domains); i++ {
-		if (*domains)[i].Domain == host {
+		if (*domains)[i].Domain == hostInfos[0] {
 			domain = &(*domains)[i]
 			return
 		}

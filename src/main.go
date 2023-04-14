@@ -23,14 +23,12 @@ var (
 	domains   []DomainConfig
 )
 
-func init() {
-	domains = ParseDomains(*wwwRoot)
-}
-
 func RunServer() {
 	if !flag.Parsed() {
 		flag.Parse()
 	}
+
+	domains = ParseDomains(*wwwRoot)
 
 	fmt.Println("Mini HTTP is Starting")
 
