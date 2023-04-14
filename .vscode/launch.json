@@ -59,6 +59,25 @@
                 "--root",
                 "${workspaceFolder}/assets/"
             ]
+        },
+        {
+            "name": "localhost https server",
+            "type": "go",
+            "request": "launch",
+            "mode": "debug",
+            "program": "${workspaceFolder}/main.go",
+            "args": [
+                "--https-port",
+                "8011",
+                "--root",
+                "${workspaceFolder}/assets/cert/localhost/",
+                "--domain",
+                "localhost",
+                "--cert",
+                "${workspaceFolder}/assets/cert/localhost/cert.pem",
+                "--key",
+                "${workspaceFolder}/assets/cert/localhost/private.key"
+            ]
         }
     ]
 }
