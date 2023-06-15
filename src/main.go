@@ -20,6 +20,7 @@ var (
 	_         = flag.String("cert", "", "Domain Cert File")
 	_         = flag.String("key", "", "Domain Key File")
 	_         = flag.String("mode", "", "Can Be Set To 'history' to Support Web APP Routing")
+	notFound  = flag.String("not-found", "/404.html", "Custom 404 page")
 	domains   []DomainConfig
 )
 
@@ -35,6 +36,7 @@ func RunServer() {
 	handler := &StaticServerHandler{
 		Domains:        domains,
 		DefaultWWWRoot: *wwwRoot,
+		NotFound:       *notFound,
 	}
 
 	httpServer := &http.Server{

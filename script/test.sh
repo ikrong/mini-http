@@ -4,6 +4,7 @@ go run main.go \
    --port 80 \
    --https-port 443 \
    --domain example.com \
+   --not-found $dir/assets/404.html \
    --cert $dir/assets/cert/example.com/cert.pem \
    --key $dir/assets/cert/example.com/private.key \
    --root $dir/assets/cert/example.com/ \

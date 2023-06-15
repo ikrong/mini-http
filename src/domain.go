@@ -6,11 +6,12 @@ import (
 )
 
 type DomainConfig struct {
-	Domain string
-	Cert   string
-	Key    string
-	Mode   string
-	Root   string
+	Domain   string
+	Cert     string
+	Key      string
+	Mode     string
+	Root     string
+	NotFound string
 }
 
 func ParseDomains(wwwRoot string) (domains []DomainConfig) {
@@ -36,6 +37,9 @@ func ParseDomains(wwwRoot string) (domains []DomainConfig) {
 				i += 1
 			case key == "--root":
 				domain.Root = os.Args[i+1]
+				i += 1
+			case key == "--not-found":
+				domain.NotFound = os.Args[i+1]
 				i += 1
 			}
 		}

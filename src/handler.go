@@ -1,6 +1,8 @@
 package src
 
 import (
+	"fmt"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
@@ -9,11 +11,13 @@ import (
 type StaticServerHandler struct {
 	Domains        []DomainConfig
 	DefaultWWWRoot string
+	NotFound       string
 }
 
 func (s *StaticServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	domain := CurrentDomain(&s.Domains, r.Host)
 	if domain != nil && domain.Root != "" {
+		fmt.Printf("%s %s\n", domain.Domain, r.URL.Path)
 		if domain.Mode == "history" {
 			filePath := path.Join(domain.Root, r.URL.Path)
 			_, err := os.Stat(filePath)
@@ -23,13 +27,22 @@ func (s *StaticServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			}
 		}
 		if !checkFileExist(domain.Root, r.URL.Path) {
+			if domain.NotFound != "" && checkFileExist("/", domain.NotFound) {
+				sendFile(&w, domain.NotFound)
+				return
+			}
 			http.NotFound(w, r)
 			return
 		}
 		http.FileServer(http.Dir(domain.Root)).ServeHTTP(w, r)
 		return
 	} else if s.DefaultWWWRoot != "" {
+		fmt.Printf("%s %s\n", "default", r.URL.Path)
 		if !checkFileExist(s.DefaultWWWRoot, r.URL.Path) {
+			if s.NotFound != "" && checkFileExist("/", s.NotFound) {
+				sendFile(&w, s.NotFound)
+				return
+			}
 			http.NotFound(w, r)
 			return
 		}
@@ -55,4 +68,12 @@ func checkFileExist(wwwRoot string, urlpath string) (exist bool) {
 		}
 	}
 	return
+}
+
+func sendFile(w *http.ResponseWriter, file string) {
+	stream, err := ioutil.ReadFile(file)
+	if err == nil {
+		(*w).WriteHeader(404)
+		(*w).Write(stream)
+	}
 }
