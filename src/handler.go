@@ -124,7 +124,10 @@ func sendFile(w *http.ResponseWriter, file string, code int) {
 			_, name := filepath.Split(file)
 			exts := strings.Split(name, ".")
 			ext := exts[len(exts)-2]
-			(*w).Header().Set("content-type", mime.TypeByExtension(fmt.Sprintf(".%s", ext)))
+			contentType := mime.TypeByExtension(fmt.Sprintf(".%s", ext))
+			if contentType != "" {
+				(*w).Header().Set("content-type", contentType)
+			}
 			(*w).Header().Set("vary", "accept-encoding")
 			(*w).Header().Set("content-encoding", "gzip")
 		}

@@ -1,5 +1,5 @@
 /generate
-/dist
+!/dist
 *.sh
 .git
 .gitignore
@@ -9,3 +9,4 @@
 !/assets/index.html
 !/assets/404.html
 .git
+/upx

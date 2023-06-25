@@ -14,7 +14,7 @@ import (
 
 var (
 	httpPort  = flag.Int("port", 80, "HTTP Port")
-	httpsPort = flag.Int("https-port", 443, "HTTPS Port")
+	httpsPort = flag.Int("https-port", 0, "HTTPS Port")
 	wwwRoot   = flag.String("root", "/www/", "WWW Root")
 	_         = flag.String("domain", "", "Domain")
 	_         = flag.String("cert", "", "Domain Cert File")

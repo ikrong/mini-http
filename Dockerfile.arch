@@ -1,0 +1,13 @@
+FROM scratch
+
+ARG TARGETPLATFORM
+
+COPY ./dist/${TARGETPLATFORM}/serve /serve
+
+COPY ./assets/index.html /www/index.html
+
+COPY ./assets/404.html /404.html
+
+WORKDIR /www
+
+CMD [ "/serve", "--port", "80" ]
