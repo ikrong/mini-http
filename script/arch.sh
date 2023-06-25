@@ -1,9 +1,7 @@
 rm -rf ./dist
 
 # osarchs=$(go tool dist list | grep -E 'windows|linux|darwin')
-osarchs="darwin/amd64
-darwin/arm64
-linux/amd64
+osarchs="linux/amd64
 linux/arm64
 linux/arm/v7
 linux/arm/v6
@@ -39,11 +37,19 @@ do
     ver=${info[2]}
     echo "building $os $arch $ver"
     if [ "$arch"="arm" -a -n "$ver" ];then
-        GOOS=$os GOARCH=$arch GOARM=$(echo $ver | tr -d a-zA-Z) go build -ldflags="-s -w" -o dist/$osarch/serve main.go
+        GOOS=$os GOARCH=$arch GOARM=$(echo $ver | tr -d a-zA-Z) CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/$osarch/serve main.go
         ./upx/$upxFileName/upx --best dist/$osarch/serve
+        chmod +x dist/$osarch/serve
+        GOOS=$os GOARCH=$arch GOARM=$(echo $ver | tr -d a-zA-Z) CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/$os.$arch.$ver.serve main.go
+        ./upx/$upxFileName/upx --best dist/$os.$arch.$ver.serve
+        chmod +x dist/$os.$arch.$ver.serve
     else
-        GOOS=$os GOARCH=$arch go build -ldflags="-s -w" -o dist/$osarch/serve main.go
+        GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/$osarch/serve main.go
         ./upx/$upxFileName/upx --best dist/$osarch/serve
+        chmod +x dist/$osarch/serve
+        GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/$os.$arch.serve main.go
+        ./upx/$upxFileName/upx --best dist/$os.$arch.serve
+        chmod +x dist/$os.$arch.serve
     fi
     echo "$os $arch $ver build finished"
 done
