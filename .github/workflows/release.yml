@@ -37,7 +37,7 @@ jobs:
       with:
          context: .
          file: Dockerfile.arch
-         platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6,linux/arm/v5,linux/386,windows/386,windows/amd64,windows/arm/v7
+         platforms: linux/amd64,linux/arm64,linux/arm/v7,linux/arm/v6,linux/arm/v5,linux/386
          push: true
          tags: ikrong/mini-http:${{github.ref_name}}
     
@@ -46,4 +46,5 @@ jobs:
       with:
           token: ${{ secrets.TOKEN }}
           files: |
-             dist/*.serve
+             dist/*.tar.gz
+             dist/*.zip

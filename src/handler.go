@@ -23,27 +23,28 @@ func (s *StaticServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	if domain != nil && domain.Root != "" {
 		fmt.Printf("%s %s\n", domain.Domain, r.URL.Path)
 		target, code = getSatisfiedFile(&findFileConfig{
-			Root:     domain.Root,
-			Path:     r.URL.Path,
-			NotFound: s.NotFound,
+			Root: domain.Root,
+			Path: r.URL.Path,
 		})
 		if domain.Mode == "history" {
-			filePath := path.Join(domain.Root, r.URL.Path)
-			_, err := os.Stat(filePath)
-			if err != nil && (filepath.Ext(filePath) == "" || filepath.Ext(filePath) == "html") {
+			// 先判断路径下是否有文件
+			target, code = getSatisfiedFile(&findFileConfig{
+				Root: domain.Root,
+				Path: r.URL.Path,
+			})
+			// 如果没有文件，并且请求html，则返回index.html
+			if code == 404 && (filepath.Ext(target) == "" || filepath.Ext(target) == "html") {
 				target, code = getSatisfiedFile(&findFileConfig{
-					Root:     domain.Root,
-					Path:     "index.html",
-					NotFound: s.NotFound,
+					Root: domain.Root,
+					Path: "index.html",
 				})
 			}
 		}
 	} else if s.DefaultWWWRoot != "" {
 		fmt.Printf("%s %s\n", "default", r.URL.Path)
 		target, code = getSatisfiedFile(&findFileConfig{
-			Root:     s.DefaultWWWRoot,
-			Path:     r.URL.Path,
-			NotFound: s.NotFound,
+			Root: s.DefaultWWWRoot,
+			Path: r.URL.Path,
 		})
 	}
 	if code == 200 {
@@ -68,29 +69,32 @@ func (s *StaticServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 }
 
 type findFileConfig struct {
-	Root     string
-	Path     string
-	NotFound string
+	Root string
+	Path string
 }
 
 func getSatisfiedFile(config *findFileConfig) (target string, code int) {
 	code = 200
 	target = path.Join(config.Root, config.Path)
+
+	// 优先检查本地是否有gzip压缩文件
+	_, gzipErr := os.Stat(fmt.Sprintf("%s.gz", target))
+	if !(os.IsNotExist(gzipErr) || os.IsPermission(gzipErr)) {
+		target = fmt.Sprintf("%s.gz", target)
+		return
+	}
+
 	info, err := os.Stat(target)
 
 	if os.IsNotExist(err) {
-		// 检查本地是否有gzip压缩文件
-		_, err := os.Stat(fmt.Sprintf("%s.gz", target))
-		if !(os.IsNotExist(err) || os.IsPermission(err)) {
-			target = fmt.Sprintf("%s.gz", target)
-			return
-		}
 		code = 404
+		target = ""
 		return
 	}
 
 	if os.IsPermission(err) {
 		code = 403
+		target = ""
 		return
 	}
 
