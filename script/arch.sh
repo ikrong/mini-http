@@ -1,17 +1,7 @@
 rm -rf ./dist
 
-# osarchs=$(go tool dist list | grep -E 'windows|linux|darwin')
-osarchs="darwin/amd64
-darwin/arm64
-linux/amd64
-linux/arm64
-linux/arm/v7
-linux/arm/v6
-linux/arm/v5
-linux/386
-windows/386
-windows/amd64
-windows/arm/v7"
+osarchs=$(go tool dist list | grep -E 'windows|linux|darwin')
+# osarchs="darwin/amd64"
 
 currentOsName=$(uname -s | tr A-Z a-z)
 
@@ -38,23 +28,25 @@ do
     arch=${info[1]}
     ver=${info[2]}
     echo "building $os $arch $ver"
-    if [ "$arch"="arm" -a -n "$ver" ];then
+    if [ "$arch" == "arm" -a -n "$ver" ]
+    then
         GOOS=$os GOARCH=$arch GOARM=$(echo $ver | tr -d a-zA-Z) CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/$osarch/serve main.go
         ./upx/$upxFileName/upx --best dist/$osarch/serve
-        if [ "$os"="windows" ];then
+        if [ $os == "windows" ]
+        then
             zip -j dist/${os}_${arch}_${ver}_serve.zip dist/$osarch/serve
         else
-            tar -czvf dist/${os}_${arch}_${ver}_serve.tar.gz -C dist/$osarch dist/$osarch/serve
+            tar -czvf dist/${os}_${arch}_${ver}_serve.tar.gz -C dist/$osarch serve
         fi
     else
         GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -ldflags="-s -w" -o dist/$osarch/serve main.go
         ./upx/$upxFileName/upx --best dist/$osarch/serve
-        if [ "$os"="windows" ];then
+        if [ $os == "windows" ]
+        then
             zip -j dist/${os}_${arch}_serve.zip dist/$osarch/serve
         else
-            tar -czvf dist/${os}_${arch}_serve.tar.gz -C dist/$osarch dist/$osarch/serve
+            tar -czvf dist/${os}_${arch}_serve.tar.gz -C dist/$osarch serve
         fi
     fi
     echo "$os $arch $ver build finished"
 done
-
