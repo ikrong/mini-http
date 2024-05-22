@@ -1,13 +1,39 @@
+FROM --platform=amd64 golang:1.22.3 AS builder
+ARG TARGETOS TARGETARCH TARGETVARIANT
+ENV GOOS=$TARGETOS GOARCH=$TARGETARCH VARIANT=$TARGETVARIANT
+
+WORKDIR /app
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends tar xz-utils
+
+COPY . .
+
+RUN set -eux; \
+	case "$GOARCH" in \
+		arm) export GOARM="${VARIANT#v}" ;; \
+		amd64) export GOAMD64="$VARIANT" ;; \
+		*) [ -z "$VARIANT" ] ;; \
+	esac; \
+	go env | grep -E 'OS=|ARCH=|ARM=|AMD64='; \
+    CGO_ENABLED=0 go build -ldflags "-s -w" -o serve main.go
+
+RUN chmod 777 ./build.sh && ./build.sh $TARGETOS $TARGETARCH
+
 FROM scratch
-
-ARG TARGETPLATFORM
-
-COPY ./dist/${TARGETPLATFORM}/serve /serve
-
-COPY ./assets/index.html /www/index.html
-
-COPY ./assets/404.html /404.html
 
 WORKDIR /www
 
+COPY ./assets/index.html /www/index.html
+COPY ./assets/404.html /404.html
+COPY --from=builder /app/serve /serve
+
+EXPOSE 80 443
+
 CMD [ "/serve", "--port", "80" ]
+
+# docker buildx create --use
+# docker buildx build --progress plain --platform linux/amd64 -f Dockerfile.arch -t ikrong/mini-http:1.3 --load .
+# docker buildx build --progress plain --platform linux/amd64,linux/386,linux/arm/v7,linux/arm64,linux/ppc64le,darwin/amd64,darwin/arm64 -f Dockerfile.arch -t ikrong/mini-http:1.3 --push .
+# docker buildx build --progress plain --platform darwin/amd64 -f Dockerfile.arch -t ikrong/mini-http:1.3 --output ./dist/img .
+# docker buildx build --progress plain --platform linux/amd64 -f Dockerfile.arch -t ikrong/mini-http:1.3 --output ./dist/img .

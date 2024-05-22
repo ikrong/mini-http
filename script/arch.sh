@@ -7,7 +7,7 @@ currentOsName=$(uname -s | tr A-Z a-z)
 
 currentOsArch=$(dpkg --print-architecture)
 
-currentUpxVersion=$(wget -qO- -t1 -T2 "https://api.github.com/repos/upx/upx/releases/latest" | grep "tag_name" | head -n 1 | awk -F ":" '{print $2}' | sed 's/\"//g;s/,//g;s/ //g' | tr -d a-zA-Z)
+currentUpxVersion=$(wget -qO- -t1 -T2 "https://github.com/upx/upx/releases" | grep -oP 'UPX \K([0-9]+\.[0-9]+\.[0-9]+)' | head -n 1)
 
 upxFileName="upx-${currentUpxVersion}-${currentOsArch}_${currentOsName}"
 

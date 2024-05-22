@@ -3,3 +3,4 @@
 *.tar
 .DS_Store
 /upx
+dist/

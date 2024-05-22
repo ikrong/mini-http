@@ -16,6 +16,7 @@
 - [x] 支持多域名配置
 - [x] 支持自定义404页面
 - [x] 支持gzip
+- [x] 支持api代理
 
 ## 使用方法
 
@@ -115,6 +116,24 @@ docker run -ti --rm --init \
 ```
 
 > mode 参数设置为 history 可以让对应的 domain 支持单页面应用访问
+
+7. API代理
+
+有时候，后端可能部署在其他域名下，直接访问存在跨域，跨域通过API代理，来规避跨域
+
+```shell
+docker run -ti --rm --init \
+   -p 80:80 \
+   ikrong/mini-http \
+   /serve \
+     --domain localhost \
+     --proxy /api:https://example.com/api \
+     --skip-tls-verify true
+```
+
+> proxy 参数跨域配置请求路径 /api 下的所有路径全部重定向到 https://example.com/api 路径下
+> 
+> skip-tls-verify 如果需要跳过证书验证，可以开启跳过tls验证
 
 ## LICENSE
 

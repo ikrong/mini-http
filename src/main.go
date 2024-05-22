@@ -20,6 +20,8 @@ var (
 	_         = flag.String("cert", "", "Domain Cert File")
 	_         = flag.String("key", "", "Domain Key File")
 	_         = flag.String("mode", "", "Can Be Set To 'history' to Support Web APP Routing")
+	_         = flag.String("proxy", "", "Set proxy api")
+	_         = flag.Bool("skip-tls-verify", true, "Skip tls verify")
 	notFound  = flag.String("not-found", "/404.html", "Custom 404 page")
 	domains   []DomainConfig
 )
@@ -57,6 +59,19 @@ func RunServer() {
 					domain := CurrentDomain(&domains, chi.ServerName)
 					if domain == nil {
 						return nil, errors.New("no certificate found")
+					}
+					if domain.Cert == "" {
+						err := getRootCertificate()
+						if err != nil {
+							fmt.Println("root certificate generate failed", err)
+							return nil, err
+						}
+						cert, err := getDomainCertificate(domain.Domain)
+						if err != nil {
+							fmt.Println("domain certificate generate failed", err)
+							return nil, err
+						}
+						return cert, nil
 					}
 					cert, err := tls.LoadX509KeyPair(domain.Cert, domain.Key)
 					if err != nil {

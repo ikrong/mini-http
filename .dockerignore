@@ -1,6 +1,7 @@
 /generate
 !/dist
 *.sh
+!./build.sh
 .git
 .gitignore
 *.html

@@ -1,0 +1,47 @@
+builds:
+- env:
+    - CGO_ENABLED=0
+  goos:
+    - linux
+    - darwin
+    - windows
+  goarch:
+    - amd64
+    - arm
+    - arm64
+  goarm:
+    - 6
+    - 7 
+  ignore:
+    - goos: darwin
+      goarch: 386
+    - goos: linux
+      goarch: arm
+      goarm: 7
+    - goarm: mips64
+    - gomips: hardfloat
+    - goamd64: v4
+  ldflags:
+    - -s -w
+upx:
+  - 
+    enabled: true
+    compress: best
+    lzma: true
+    brute: true
+    goos: [ linux, darwin, windows ]
+
+archives:
+  - name_template: >-
+      {{ if eq .Arch "arm" }}{{ .Os }}.{{ .Arch }}.v{{.Arm}}.serve{{ else }}{{ .Os }}.{{ .Arch }}.serve{{ end }}
+checksum:
+  name_template: 'checksums.txt'
+snapshot:
+  name_template: "{{ incpatch .Version }}-next"
+changelog:
+  sort: asc
+  filters:
+    exclude:
+    - '^docs:'
+    - '^test:'
+    - Merge pull request
