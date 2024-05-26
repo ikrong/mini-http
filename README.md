@@ -132,8 +132,6 @@ docker run -ti --rm --init \
 ```
 
 > proxy 参数跨域配置请求路径 /api 下的所有路径全部重定向到 https://example.com/api 路径下
-> 
-> skip-tls-verify 如果需要跳过证书验证，可以开启跳过tls验证
 
 ## LICENSE
 

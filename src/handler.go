@@ -155,7 +155,6 @@ func sendFile(w *http.ResponseWriter, file string, code int) {
 
 func handleProxy(domain *DomainConfig, w *http.ResponseWriter, r *http.Request) (isProxy bool) {
 	proxies := domain.Proxy
-	skipTlsVerify := domain.SkipTLSVerify
 	isProxy = false
 	if proxies == nil {
 		return
@@ -185,10 +184,8 @@ func handleProxy(domain *DomainConfig, w *http.ResponseWriter, r *http.Request) 
 					}
 				},
 			}
-			if skipTlsVerify {
-				proxyConfig.Instance.Transport = &http.Transport{
-					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-				}
+			proxyConfig.Instance.Transport = &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
 			}
 		}
 		if strings.ToLower(r.Header.Get("connection")) == "upgrade" || strings.ToLower(r.Header.Get("upgrade")) == "websocket" {
@@ -197,7 +194,7 @@ func handleProxy(domain *DomainConfig, w *http.ResponseWriter, r *http.Request) 
 			fullUrl := proxyConfig.Proxy + path[pathIndex+len(proxyConfig.Url):]
 			fullUrl = strings.Replace(fullUrl, "http", "ws", 1)
 			fmt.Printf("%s %s --> %s\n", domain.Domain, path, fullUrl)
-			handleWebSocketProxy(fullUrl, domain.SkipTLSVerify, *w, r)
+			handleWebSocketProxy(fullUrl, *w, r)
 		} else {
 			proxyConfig.Instance.ServeHTTP(*w, r)
 		}
@@ -205,7 +202,7 @@ func handleProxy(domain *DomainConfig, w *http.ResponseWriter, r *http.Request) 
 	return
 }
 
-func handleWebSocketProxy(destURLStr string, skipTlsVerify bool, w http.ResponseWriter, r *http.Request) {
+func handleWebSocketProxy(destURLStr string, w http.ResponseWriter, r *http.Request) {
 	destURL, err := url.Parse(destURLStr)
 	if err != nil {
 		http.Error(w, "Invalid destination URL", http.StatusInternalServerError)
@@ -240,7 +237,7 @@ func handleWebSocketProxy(destURLStr string, skipTlsVerify bool, w http.Response
 		}
 		// 建立TLS连接
 		destConn, err = tls.Dial("tcp", fmt.Sprintf("%s:%s", destURL.Host, destPort), &tls.Config{
-			InsecureSkipVerify: skipTlsVerify, // 根据需要设置此项，跳过证书验证
+			InsecureSkipVerify: true, // 根据需要设置此项，跳过证书验证
 		})
 	} else {
 		if destPort == "" {

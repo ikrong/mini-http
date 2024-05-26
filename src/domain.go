@@ -13,14 +13,13 @@ type DomainProxy struct {
 }
 
 type DomainConfig struct {
-	Domain        string
-	Cert          string
-	Key           string
-	Mode          string
-	Root          string
-	NotFound      string
-	Proxy         *[]DomainProxy
-	SkipTLSVerify bool
+	Domain   string
+	Cert     string
+	Key      string
+	Mode     string
+	Root     string
+	NotFound string
+	Proxy    *[]DomainProxy
 }
 
 func ParseDomains(wwwRoot string) (domains []DomainConfig) {
@@ -55,13 +54,6 @@ func ParseDomains(wwwRoot string) (domains []DomainConfig) {
 				proxy := append(*domain.Proxy, parseDomainProxy(os.Args[i+1]))
 				domain.Proxy = &proxy
 				i += 1
-			case key == "--skip-tls-verify":
-				domain.SkipTLSVerify = true
-				if i+1 < len(os.Args) {
-					if os.Args[i+1] == "true" || os.Args[i+1] == "false" {
-						i += 1
-					}
-				}
 			case key == "--not-found":
 				domain.NotFound = os.Args[i+1]
 				i += 1
