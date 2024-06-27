@@ -10,6 +10,11 @@ on:
            description: 'Platforms'
            required: true
            default: 'linux/amd64,linux/arm64'
+         push_latest:
+           description: 'Is Push Latest Tag'
+           type: boolean
+           required: true
+           default: false
 
 jobs:
     build:
@@ -42,5 +47,7 @@ jobs:
                   file: Dockerfile.arch
                   platforms: ${{ inputs.platforms }}
                   push: true
-                  tags: ikrong/mini-http:${{ inputs.version }}
+                  tags: |
+                     ikrong/mini-http:${{ inputs.version }}
+                     ${{ inputs.push_latest && 'ikrong/mini-http:latest' || '' }}
 
