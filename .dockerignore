@@ -1,6 +1,7 @@
 /generate
 !/dist
 *.sh
+!./minify.sh
 !./build.sh
 .git
 .gitignore

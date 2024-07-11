@@ -1,1 +1,0 @@
-docker build --platform=linux/amd64 -t ikrong/mini-http:$1 .

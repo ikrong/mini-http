@@ -1,9 +1,9 @@
 package src
 
 import (
+	"crypto/tls"
+	"fmt"
 	"net/http/httputil"
-	"os"
-	"strings"
 )
 
 type DomainProxy struct {
@@ -22,65 +22,57 @@ type DomainConfig struct {
 	Proxy    *[]DomainProxy
 }
 
-func ParseDomains(wwwRoot string) (domains []DomainConfig) {
-	var domain DomainConfig
-	for i := 0; i < len(os.Args); i++ {
-		if i+1 <= len(os.Args) {
-			var key = os.Args[i]
-			switch {
-			case key == "--domain":
-				if domain != (DomainConfig{}) && domain.Domain != "" {
-					domains = append(domains, domain)
-				}
-				domain = DomainConfig{Domain: os.Args[i+1], Root: wwwRoot}
-				i += 1
-			case key == "--cert":
-				domain.Cert = os.Args[i+1]
-				i += 1
-			case key == "--key":
-				domain.Key = os.Args[i+1]
-				i += 1
-			case key == "--mode":
-				domain.Mode = os.Args[i+1]
-				i += 1
-			case key == "--root":
-				domain.Root = os.Args[i+1]
-				i += 1
-			case key == "--proxy":
-				if domain.Proxy == nil {
-					p := (make([]DomainProxy, 0))
-					domain.Proxy = &p
-				}
-				proxy := append(*domain.Proxy, parseDomainProxy(os.Args[i+1]))
-				domain.Proxy = &proxy
-				i += 1
-			case key == "--not-found":
-				domain.NotFound = os.Args[i+1]
-				i += 1
-			}
-		}
-	}
-	if domain != (DomainConfig{}) && domain.Domain != "" {
-		domains = append(domains, domain)
+func NewDomain() (domain DomainConfig) {
+	domain = DomainConfig{
+		Root:     "/www",
+		NotFound: "/404.html",
 	}
 	return
 }
 
-func parseDomainProxy(cmd string) DomainProxy {
-	index := strings.Index(cmd, ":")
-	return DomainProxy{Url: cmd[0:index], Proxy: cmd[index+1:]}
+func (d *DomainConfig) label() (label string) {
+	label = "default"
+	if d.Domain != "" {
+		label = d.Domain
+	}
+	return
 }
 
-func CurrentDomain(domains *[]DomainConfig, host string) (domain *DomainConfig) {
-	hostInfos := strings.Split(host, ":")
-	if len(*domains) > 0 {
-		domain = &(*domains)[0]
+func (d *DomainConfig) isEmpty() (empty bool) {
+	empty = true
+	if d.Domain != "" {
+		empty = false
 	}
-	for i := 0; i < len(*domains); i++ {
-		if (*domains)[i].Domain == hostInfos[0] {
-			domain = &(*domains)[i]
-			return
+	return
+}
+
+func (d *DomainConfig) print() {
+	fmt.Printf("%s: \t%s\n", d.label(), d.Root)
+	fmt.Printf("\t404: \t%s\n", d.NotFound)
+	if d.Mode != "" {
+		fmt.Printf("\tMode: \t%s\n", d.Mode)
+	}
+	if d.Cert != "" {
+		fmt.Printf("\tCert: \t%s\n", d.Cert)
+	}
+	if d.Key != "" {
+		fmt.Printf("\tKey: \t%s\n", d.Key)
+	}
+	if d.Proxy != nil {
+		for _, proxy := range *d.Proxy {
+			fmt.Printf("\tProxy: \t%s\n", proxy.Url)
 		}
 	}
-	return domain
+}
+
+func (d *DomainConfig) loadCertificate() (*tls.Certificate, error) {
+	if d.Cert == "" || d.Key == "" {
+		tls, err := ca.issueCertificate(d.Domain)
+		return tls, err
+	}
+	cert, err := tls.LoadX509KeyPair(d.Cert, d.Key)
+	if err != nil {
+		return nil, err
+	}
+	return &cert, err
 }

@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
+	"log"
 	"mime"
 	"net"
 	"net/http"
@@ -16,47 +17,36 @@ import (
 )
 
 type StaticServerHandler struct {
-	Domains        []DomainConfig
-	DefaultWWWRoot string
-	NotFound       string
+	serverConfig ServerConfig
 }
 
 func (s *StaticServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	var target string
 	var code int
-	domain := CurrentDomain(&s.Domains, r.Host)
-	if domain != nil {
-		// 检查代理配置
-		isProxy := handleProxy(domain, &w, r)
-		if isProxy {
-			return
-		}
-		fmt.Printf("%s %s\n", domain.Domain, r.URL.Path)
+	domain := s.serverConfig.CurrentDomain(r.Host)
+	// 检查代理配置
+	isProxy := handleProxy(domain, &w, r)
+	if isProxy {
+		return
+	}
+	log.Printf("%s %s\n", domain.label(), r.URL.Path)
+	target, code = getSatisfiedFile(&findFileConfig{
+		Root: domain.Root,
+		Path: r.URL.Path,
+	})
+	if domain.Mode == "history" {
+		// 先判断路径下是否有文件
 		target, code = getSatisfiedFile(&findFileConfig{
 			Root: domain.Root,
 			Path: r.URL.Path,
 		})
-		if domain.Mode == "history" {
-			// 先判断路径下是否有文件
+		// 如果没有文件，并且请求html，则返回index.html
+		if code == 404 && (filepath.Ext(target) == "" || filepath.Ext(target) == "html") {
 			target, code = getSatisfiedFile(&findFileConfig{
 				Root: domain.Root,
-				Path: r.URL.Path,
+				Path: "index.html",
 			})
-			// 如果没有文件，并且请求html，则返回index.html
-			if code == 404 && (filepath.Ext(target) == "" || filepath.Ext(target) == "html") {
-				target, code = getSatisfiedFile(&findFileConfig{
-					Root: domain.Root,
-					Path: "index.html",
-				})
-			}
 		}
-	} else if s.DefaultWWWRoot != "" {
-		// 检查代理配置
-		fmt.Printf("%s %s\n", "default", r.URL.Path)
-		target, code = getSatisfiedFile(&findFileConfig{
-			Root: s.DefaultWWWRoot,
-			Path: r.URL.Path,
-		})
 	}
 	if code == 200 {
 		// 判断使用本地gzip文件的情况
@@ -66,10 +56,8 @@ func (s *StaticServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		}
 		http.ServeFile(w, r, target)
 	} else if code == 404 {
-		if domain != nil && domain.NotFound != "" {
+		if domain.NotFound != "" {
 			sendFile(&w, domain.NotFound, 404)
-		} else if s.NotFound != "" {
-			sendFile(&w, s.NotFound, 404)
 		} else {
 			http.NotFound(w, r)
 		}
@@ -153,7 +141,7 @@ func sendFile(w *http.ResponseWriter, file string, code int) {
 	}
 }
 
-func handleProxy(domain *DomainConfig, w *http.ResponseWriter, r *http.Request) (isProxy bool) {
+func handleProxy(domain DomainConfig, w *http.ResponseWriter, r *http.Request) (isProxy bool) {
 	proxies := domain.Proxy
 	isProxy = false
 	if proxies == nil {
@@ -175,7 +163,7 @@ func handleProxy(domain *DomainConfig, w *http.ResponseWriter, r *http.Request) 
 					pathIndex := strings.Index(path, proxyConfig.Url)
 					fullUrl := proxyConfig.Proxy + path[pathIndex+len(proxyConfig.Url):]
 					parsedUrl, err := url.Parse(fullUrl)
-					fmt.Printf("%s %s --> %s\n", domain.Domain, path, fullUrl)
+					log.Printf("%s %s --> %s\n", domain.Domain, path, fullUrl)
 					if err == nil {
 						r.URL.Scheme = parsedUrl.Scheme
 						r.URL.Host = parsedUrl.Host
@@ -193,7 +181,7 @@ func handleProxy(domain *DomainConfig, w *http.ResponseWriter, r *http.Request) 
 			pathIndex := strings.Index(path, proxyConfig.Url)
 			fullUrl := proxyConfig.Proxy + path[pathIndex+len(proxyConfig.Url):]
 			fullUrl = strings.Replace(fullUrl, "http", "ws", 1)
-			fmt.Printf("%s %s --> %s\n", domain.Domain, path, fullUrl)
+			log.Printf("%s %s --> %s\n", domain.Domain, path, fullUrl)
 			handleWebSocketProxy(fullUrl, *w, r)
 		} else {
 			proxyConfig.Instance.ServeHTTP(*w, r)

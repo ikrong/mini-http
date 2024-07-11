@@ -10,24 +10,52 @@ import (
 	"encoding/pem"
 	"math/big"
 	"os"
+	"path"
 	"sync"
 	"time"
 )
 
-var (
-	rootCertPEM  []byte
-	rootKeyPEM   []byte
-	certCache    sync.Map
-	rootCertPath = "/certs/root.crt"
-	rootKeyPath  = "/certs/root.key"
-)
+var ca = CA{}
 
-func getRootCertificate() (err error) {
-	if _, err = os.Stat(rootCertPath); err == nil {
-		certPEM, _ := os.ReadFile(rootCertPath)
-		keyPEM, _ := os.ReadFile(rootKeyPath)
-		rootCertPEM = certPEM
-		rootKeyPEM = keyPEM
+type CA struct {
+	certByte []byte
+	keyByte  []byte
+	store    sync.Map
+}
+
+func (ca *CA) getRootDir() (rootDir string, err error) {
+	userDir, err := os.UserConfigDir()
+	if err != nil {
+		userDir = "/tmp/"
+	}
+	rootDir = path.Join(userDir, ".ikrong/mini-http")
+	if _, err = os.Stat(rootDir); err != nil {
+		os.MkdirAll(rootDir, 0755)
+	}
+	return
+}
+
+func (ca *CA) generateRootCertificate() (err error) {
+	if ca.certByte != nil {
+		return
+	}
+	rootDir, err := ca.getRootDir()
+	if err != nil {
+		return
+	}
+	certFile := path.Join(rootDir, "root.crt")
+	keyFile := path.Join(rootDir, "root.key")
+	var cert []byte
+	var key []byte
+	if _, err = os.Stat(certFile); err != nil {
+		if cert, err = os.ReadFile(certFile); err != nil {
+			return
+		}
+		if key, err = os.ReadFile(keyFile); err != nil {
+			return
+		}
+		ca.certByte = cert
+		ca.keyByte = key
 		return
 	}
 	priv, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
@@ -55,38 +83,26 @@ func getRootCertificate() (err error) {
 	pemBlock, _ := x509.MarshalECPrivateKey(priv)
 	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: pemBlock})
 
-	err = os.MkdirAll("/certs", 0755)
-	if err != nil {
+	if err = os.WriteFile(certFile, certPEM, 0644); err != nil {
 		return
 	}
-	err = os.WriteFile(rootCertPath, certPEM, 0644)
-	if err != nil {
+
+	if err = os.WriteFile(keyFile, keyPEM, 0644); err != nil {
 		return
 	}
-	err = os.WriteFile(rootKeyPath, keyPEM, 0644)
-	if err != nil {
-		return
-	}
-	rootCertPEM = certPEM
-	rootKeyPEM = keyPEM
+	ca.certByte = certPEM
+	ca.keyByte = keyPEM
 	return
 }
 
-func getDomainCertificate(domain string) (*tls.Certificate, error) {
-	if cert, ok := certCache.Load(domain); ok {
+func (ca *CA) issueCertificate(domain string) (*tls.Certificate, error) {
+	if err := ca.generateRootCertificate(); err != nil {
+		return nil, err
+	}
+	if cert, ok := ca.store.Load(domain); ok {
 		return cert.(*tls.Certificate), nil
 	}
 
-	cert, err := generateDomainCertificate(domain)
-	if err != nil {
-		return nil, err
-	}
-
-	certCache.Store(domain, cert)
-	return cert, nil
-}
-
-func generateDomainCertificate(domain string) (*tls.Certificate, error) {
 	priv, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	notBefore := time.Now()
 	notAfter := notBefore.Add(365 * 24 * time.Hour)
@@ -103,10 +119,10 @@ func generateDomainCertificate(domain string) (*tls.Certificate, error) {
 		DNSNames:              []string{domain},
 	}
 
-	rootCertBlock, _ := pem.Decode(rootCertPEM)
+	rootCertBlock, _ := pem.Decode(ca.certByte)
 	rootCert, _ := x509.ParseCertificate(rootCertBlock.Bytes)
 
-	rootKeyBlock, _ := pem.Decode(rootKeyPEM)
+	rootKeyBlock, _ := pem.Decode(ca.keyByte)
 	rootKey, _ := x509.ParseECPrivateKey(rootKeyBlock.Bytes)
 
 	derBytes, _ := x509.CreateCertificate(rand.Reader, &template, rootCert, &priv.PublicKey, rootKey)
@@ -117,6 +133,8 @@ func generateDomainCertificate(domain string) (*tls.Certificate, error) {
 	keyPEM := pem.EncodeToMemory(&pem.Block{Type: "EC PRIVATE KEY", Bytes: pemBlock})
 
 	cert, _ := tls.X509KeyPair(certPEM, keyPEM)
+
+	ca.store.Store(domain, &cert)
 
 	return &cert, nil
 }
