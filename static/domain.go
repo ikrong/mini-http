@@ -1,4 +1,4 @@
-package src
+package static
 
 import (
 	"crypto/tls"
@@ -66,10 +66,6 @@ func (d *DomainConfig) print() {
 }
 
 func (d *DomainConfig) loadCertificate() (*tls.Certificate, error) {
-	if d.Cert == "" || d.Key == "" {
-		tls, err := ca.issueCertificate(d.Domain)
-		return tls, err
-	}
 	cert, err := tls.LoadX509KeyPair(d.Cert, d.Key)
 	if err != nil {
 		return nil, err

@@ -1,4 +1,4 @@
-package src
+package static
 
 import (
 	"crypto/tls"
@@ -8,6 +8,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"sync"
 )
 
 func RunServer(args []string) (err error) {
@@ -52,10 +53,36 @@ func RunServer(args []string) (err error) {
 		if err != nil {
 			log.Panic(err)
 		}
+		var certStore sync.Map
+		var certMutex sync.Mutex
 		tlsConfig := &tls.Config{
 			GetCertificate: func(chi *tls.ClientHelloInfo) (*tls.Certificate, error) {
+				domainName := chi.ServerName
+				if cert, ok := certStore.Load(chi.ServerName); ok {
+					return cert.(*tls.Certificate), nil
+				}
 				domain := serverConfig.CurrentDomain(chi.ServerName)
-				return domain.loadCertificate()
+				if domain.Cert != "" && domain.Key != "" {
+					cert, err := domain.loadCertificate()
+					if err == nil {
+						certStore.Store(chi.ServerName, cert)
+					}
+					return cert, err
+				} else {
+					certMutex.Lock()
+					defer certMutex.Unlock()
+					if domainName == "" {
+						domainName = "localhost"
+					}
+					if cert, ok := certStore.Load(domainName); ok {
+						return cert.(*tls.Certificate), nil
+					}
+					cert, err := ca.issueCertificate(domainName)
+					if err == nil {
+						certStore.Store(domainName, cert)
+					}
+					return cert, err
+				}
 			},
 		}
 		go func() {

@@ -19,4 +19,5 @@ docker buildx build \
        -f Dockerfile \
        -t ikrong/mini-http:$VERSION \
        --load \
+       --build-arg IS_LOCAL=true \
        . 

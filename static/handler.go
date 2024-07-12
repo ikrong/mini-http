@@ -1,4 +1,4 @@
-package src
+package static
 
 import (
 	"crypto/tls"
