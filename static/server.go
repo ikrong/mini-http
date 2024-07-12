@@ -58,6 +58,11 @@ func RunServer(args []string) (err error) {
 		tlsConfig := &tls.Config{
 			GetCertificate: func(chi *tls.ClientHelloInfo) (*tls.Certificate, error) {
 				domainName := chi.ServerName
+				if domainName == "" {
+					domainName = "localhost"
+				}
+				certMutex.Lock()
+				defer certMutex.Unlock()
 				if cert, ok := certStore.Load(chi.ServerName); ok {
 					return cert.(*tls.Certificate), nil
 				}
@@ -69,14 +74,6 @@ func RunServer(args []string) (err error) {
 					}
 					return cert, err
 				} else {
-					certMutex.Lock()
-					defer certMutex.Unlock()
-					if domainName == "" {
-						domainName = "localhost"
-					}
-					if cert, ok := certStore.Load(domainName); ok {
-						return cert.(*tls.Certificate), nil
-					}
 					cert, err := ca.issueCertificate(domainName)
 					if err == nil {
 						certStore.Store(domainName, cert)

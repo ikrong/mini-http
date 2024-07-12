@@ -4,15 +4,13 @@ import (
 	"crypto/tls"
 	"io"
 	"net/http"
-	"strings"
 )
 
 func Get(url string) (content string, status int, err error) {
-	var client http.Client
-	if strings.Contains(url, "https") {
-		client.Transport = &http.Transport{
+	client := http.Client{
+		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		}
+		},
 	}
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
