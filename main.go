@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	. "mini-http/src"
+	"mini-http/static"
 	"os"
 	"os/signal"
 	"path"
@@ -12,7 +12,7 @@ import (
 func main() {
 	checkArgs()
 
-	err := RunServer(os.Args[1:])
+	err := static.RunServer(os.Args[1:])
 
 	if err != nil {
 		fmt.Println("Mini HTTP Start Failed")
@@ -24,12 +24,10 @@ func main() {
 	sigChannel := make(chan os.Signal, 1)
 	signal.Notify(sigChannel, os.Interrupt, syscall.SIGTERM)
 
-	select {
-	case <-sigChannel:
-		fmt.Println("")
-		fmt.Println("Mini HTTP Closed")
-		os.Exit(0)
-	}
+	<-sigChannel
+	fmt.Println("")
+	fmt.Println("Mini HTTP Closed")
+	os.Exit(0)
 }
 
 func usage() {
@@ -74,6 +72,17 @@ func checkArgs() {
 		if os.Args[i] == "-h" || os.Args[i] == "--help" || os.Args[i] == "-help" {
 			usage()
 			os.Exit(0)
+		}
+
+		if os.Args[i] == "get" {
+			url := os.Args[i+1]
+			_, status, err := static.Get(url)
+			if err == nil && status == 200 {
+				fmt.Printf("Status: %d\n", status)
+				os.Exit(0)
+			}
+			fmt.Printf("Status: %d Err: %s\n", status, err)
+			os.Exit(1)
 		}
 	}
 }

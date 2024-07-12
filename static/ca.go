@@ -1,4 +1,4 @@
-package src
+package static
 
 import (
 	"crypto/ecdsa"
@@ -21,6 +21,7 @@ type CA struct {
 	certByte []byte
 	keyByte  []byte
 	store    sync.Map
+	mu       sync.Mutex
 }
 
 func (ca *CA) getRootDir() (rootDir string, err error) {
@@ -28,9 +29,10 @@ func (ca *CA) getRootDir() (rootDir string, err error) {
 	if err != nil {
 		userDir = "/tmp/"
 	}
-	rootDir = path.Join(userDir, ".ikrong/mini-http")
+	rootDir = path.Join(userDir, "ikrong/mini-http")
 	if _, err = os.Stat(rootDir); err != nil {
 		os.MkdirAll(rootDir, 0755)
+		err = nil
 	}
 	return
 }
@@ -47,17 +49,16 @@ func (ca *CA) generateRootCertificate() (err error) {
 	keyFile := path.Join(rootDir, "root.key")
 	var cert []byte
 	var key []byte
-	if _, err = os.Stat(certFile); err != nil {
-		if cert, err = os.ReadFile(certFile); err != nil {
-			return
+	if _, err = os.Stat(certFile); err == nil {
+		if cert, err = os.ReadFile(certFile); err == nil {
+			if key, err = os.ReadFile(keyFile); err == nil {
+				ca.certByte = cert
+				ca.keyByte = key
+				return
+			}
 		}
-		if key, err = os.ReadFile(keyFile); err != nil {
-			return
-		}
-		ca.certByte = cert
-		ca.keyByte = key
-		return
 	}
+
 	priv, _ := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 
 	notBefore := time.Now()
@@ -65,16 +66,19 @@ func (ca *CA) generateRootCertificate() (err error) {
 
 	serialNumber, _ := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
 
+	// 设置证书模板
 	template := x509.Certificate{
-		SerialNumber:          serialNumber,
-		Subject:               pkix.Name{Organization: []string{"IKrong Root CA"}},
+		SerialNumber: serialNumber,
+		Subject: pkix.Name{
+			Organization: []string{"IKrong Root CA"},
+			CommonName:   "IKrong Root CA",
+		},
 		NotBefore:             notBefore,
 		NotAfter:              notAfter,
-		KeyUsage:              x509.KeyUsageCertSign | x509.KeyUsageCRLSign,
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
 		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
 		BasicConstraintsValid: true,
 		IsCA:                  true,
-		MaxPathLen:            0,
 	}
 
 	derBytes, _ := x509.CreateCertificate(rand.Reader, &template, &template, &priv.PublicKey, priv)
@@ -96,6 +100,8 @@ func (ca *CA) generateRootCertificate() (err error) {
 }
 
 func (ca *CA) issueCertificate(domain string) (*tls.Certificate, error) {
+	ca.mu.Lock()
+	defer ca.mu.Unlock()
 	if err := ca.generateRootCertificate(); err != nil {
 		return nil, err
 	}
@@ -108,19 +114,23 @@ func (ca *CA) issueCertificate(domain string) (*tls.Certificate, error) {
 	notAfter := notBefore.Add(365 * 24 * time.Hour)
 	serialNumber, _ := rand.Int(rand.Reader, new(big.Int).Lsh(big.NewInt(1), 128))
 
+	rootCertBlock, _ := pem.Decode(ca.certByte)
+	rootCert, _ := x509.ParseCertificate(rootCertBlock.Bytes)
+
 	template := x509.Certificate{
-		SerialNumber:          serialNumber,
-		Subject:               pkix.Name{Organization: []string{domain}},
+		SerialNumber: serialNumber,
+		Subject: pkix.Name{
+			Organization: []string{domain},
+			CommonName:   domain,
+		},
+		Issuer:                rootCert.Subject,
 		NotBefore:             notBefore,
 		NotAfter:              notAfter,
 		KeyUsage:              x509.KeyUsageKeyEncipherment | x509.KeyUsageDigitalSignature,
-		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth, x509.ExtKeyUsageClientAuth},
 		BasicConstraintsValid: true,
 		DNSNames:              []string{domain},
 	}
-
-	rootCertBlock, _ := pem.Decode(ca.certByte)
-	rootCert, _ := x509.ParseCertificate(rootCertBlock.Bytes)
 
 	rootKeyBlock, _ := pem.Decode(ca.keyByte)
 	rootKey, _ := x509.ParseECPrivateKey(rootKeyBlock.Bytes)

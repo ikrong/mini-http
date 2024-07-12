@@ -5,9 +5,10 @@ import (
 	"crypto/x509"
 	"fmt"
 	"io"
-	. "mini-http/src"
+	"mini-http/static"
 	"net/http"
 	"os"
+	"path"
 	"strings"
 	"testing"
 
@@ -21,15 +22,17 @@ type testRequest struct {
 	url      string
 	response string
 	status   int
+	allowErr bool
 }
 
 type testCase struct {
-	label    string
-	ca       string
-	cert     string
-	key      string
-	args     []string
-	requests []testRequest
+	label               string
+	enableSelfSignedSSL bool
+	ca                  string
+	cert                string
+	key                 string
+	args                []string
+	requests            []testRequest
 }
 
 func (c *testCase) Run(t *testing.T) {
@@ -46,11 +49,15 @@ func (c *testCase) Run(t *testing.T) {
 			port++
 			httpsPort = port
 			ports = append(ports, "--https-port", fmt.Sprintf("%d", httpsPort), "--cert", c.cert, "--key", c.key)
+		} else if c.enableSelfSignedSSL {
+			port++
+			httpsPort = port
+			ports = append(ports, "--https-port", fmt.Sprintf("%d", httpsPort))
 		}
 
 		args := append(ports, c.args...)
 
-		err := RunServer(args)
+		err := static.RunServer(args)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -62,7 +69,11 @@ func (c *testCase) Run(t *testing.T) {
 			}
 			content, status, err := get(url, c.ca)
 			if err != nil {
+				if request.allowErr {
+					continue
+				}
 				t.Error(err)
+				continue
 			}
 			if request.response != "" {
 				assert.Equal(t, request.response, content)
@@ -75,18 +86,30 @@ func (c *testCase) Run(t *testing.T) {
 	fmt.Println("================== End Test " + c.label + " ==================")
 }
 
+func getSelfSignedCertDir() string {
+	userDir, err := os.UserConfigDir()
+	if err != nil {
+		userDir = "/tmp/"
+	}
+	dir := path.Join(userDir, "ikrong/mini-http")
+	return dir
+}
+
 func get(url string, cert string) (content string, status int, err error) {
 	transport := &http.Transport{}
-	if cert != "" {
+	if strings.Contains(url, "https") {
+		if cert == "" {
+			cert = path.Join(getSelfSignedCertDir(), "root.crt")
+		}
 		var certContent []byte
 		certContent, err = os.ReadFile(cert)
-		if err != nil {
-			return
+		if err == nil {
+			caCertPool := x509.NewCertPool()
+			caCertPool.AppendCertsFromPEM(certContent)
+			transport.TLSClientConfig = &tls.Config{RootCAs: caCertPool}
 		}
-		caCertPool := x509.NewCertPool()
-		caCertPool.AppendCertsFromPEM(certContent)
-		transport.TLSClientConfig = &tls.Config{RootCAs: caCertPool}
 	}
+
 	client := &http.Client{Transport: transport}
 	request, err := http.NewRequest("GET", url, nil)
 	if err != nil {
@@ -241,6 +264,26 @@ func Test(t *testing.T) {
 				},
 			},
 		},
+		{
+			label:               "Test SelfSigned Https Server",
+			enableSelfSignedSSL: true,
+			args: []string{
+				"--domain", "localhost",
+				"--root", fmt.Sprintf("%s/assets/domain/localhost/", currentDir),
+			},
+			requests: []testRequest{
+				{
+					// 首次访问，CA证书还没生成，所以客户端无法受信，会出错
+					url:      "https://localhost:%d",
+					allowErr: true,
+				},
+				{
+					url:      "https://localhost:%d",
+					status:   http.StatusOK,
+					response: "localhost",
+				},
+			},
+		},
 	}
 
 	for _, c := range testCaseList {
@@ -251,6 +294,10 @@ func Test(t *testing.T) {
 func TestMain(m *testing.M) {
 	// 获取当前文件夹
 	currentDir, _ = os.Getwd()
+	selfSignedCertDir := getSelfSignedCertDir()
+	if _, err := os.Stat(selfSignedCertDir); err == nil {
+		os.RemoveAll(selfSignedCertDir)
+	}
 
 	os.Exit(m.Run())
 }
