@@ -229,6 +229,7 @@ func Test(t *testing.T) {
 				"--root", fmt.Sprintf("%s/assets/domain/localhost/", currentDir),
 				"--proxy", "/proxy/gen_204:http://connectivitycheck.gstatic.com/generate_204",
 				"--proxy", "/proxy/another/a/b/c/gen_204:http://connectivitycheck.gstatic.com/generate_204",
+				"--proxy", "/proxy/gstatic:http://connectivitycheck.gstatic.com",
 			},
 			requests: []testRequest{
 				{
@@ -238,6 +239,11 @@ func Test(t *testing.T) {
 				},
 				{
 					url:      "http://localhost:%d/proxy/another/a/b/c/gen_204",
+					status:   http.StatusNoContent,
+					response: "",
+				},
+				{
+					url:      "http://localhost:%d/proxy/gstatic/generate_204",
 					status:   http.StatusNoContent,
 					response: "",
 				},
