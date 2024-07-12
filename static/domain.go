@@ -60,7 +60,7 @@ func (d *DomainConfig) print() {
 	}
 	if d.Proxy != nil {
 		for _, proxy := range *d.Proxy {
-			fmt.Printf("\tProxy: \t%s\n", proxy.Url)
+			fmt.Printf("\tProxy: \t%s -> %s\n", proxy.Url, proxy.Proxy)
 		}
 	}
 }
