@@ -54,6 +54,10 @@ func (s *StaticServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 			sendFile(&w, target, 200)
 			return
 		}
+		// 避免访问 /index.html 重定向到 /
+		if strings.HasSuffix(r.URL.Path, "/index.html") {
+			r.URL.Path = r.URL.Path[:len(r.URL.Path)-10]
+		}
 		http.ServeFile(w, r, target)
 	} else if code == 404 {
 		if domain.NotFound != "" {
@@ -121,24 +125,26 @@ func checkGzipFileExist(path *string) {
 }
 
 func sendFile(w *http.ResponseWriter, file string, code int) {
-	stream, err := os.ReadFile(file)
-	if err == nil {
-		if strings.HasSuffix(file, ".gz") {
-			_, name := filepath.Split(file)
-			exts := strings.Split(name, ".")
-			ext := exts[len(exts)-2]
-			contentType := mime.TypeByExtension(fmt.Sprintf(".%s", ext))
-			if contentType != "" {
-				(*w).Header().Set("content-type", contentType)
-			}
-			(*w).Header().Set("vary", "accept-encoding")
-			(*w).Header().Set("content-encoding", "gzip")
-		}
-		(*w).WriteHeader(code)
-		(*w).Write(stream)
-	} else {
+	f, err := os.OpenFile(file, os.O_RDONLY, 0)
+	if err != nil {
 		(*w).WriteHeader(404)
+		return
 	}
+	defer f.Close()
+	if strings.HasSuffix(file, ".gz") {
+		_, name := filepath.Split(file)
+		exts := strings.Split(name, ".")
+		ext := exts[len(exts)-2]
+		contentType := mime.TypeByExtension(fmt.Sprintf(".%s", ext))
+		if contentType != "" {
+			(*w).Header().Set("content-type", contentType)
+		}
+		(*w).Header().Set("vary", "accept-encoding")
+		(*w).Header().Set("content-encoding", "gzip")
+	}
+	(*w).WriteHeader(code)
+	// 使用copy可以避免减少内存占用
+	io.Copy((*w), f)
 }
 
 func handleProxy(domain DomainConfig, w *http.ResponseWriter, r *http.Request) (isProxy bool) {
