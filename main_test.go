@@ -7,6 +7,7 @@ import (
 	"io"
 	"mini-http/static"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"strings"
@@ -19,10 +20,11 @@ var port = 32000
 var currentDir string
 
 type testRequest struct {
-	url      string
-	response string
-	status   int
-	allowErr bool
+	url               string
+	response          string
+	proxyConfigCookie string
+	status            int
+	allowErr          bool
 }
 
 type testCase struct {
@@ -33,6 +35,10 @@ type testCase struct {
 	key                 string
 	args                []string
 	requests            []testRequest
+}
+
+func encodeURIComponent(s string) string {
+	return url.QueryEscape(s)
 }
 
 func (c *testCase) Run(t *testing.T) {
@@ -67,7 +73,7 @@ func (c *testCase) Run(t *testing.T) {
 			if strings.Contains(request.url, "https") {
 				url = fmt.Sprintf(request.url, httpsPort)
 			}
-			content, status, err := get(url, c.ca)
+			content, status, err := get(url, c.ca, request.proxyConfigCookie)
 			if err != nil {
 				if request.allowErr {
 					continue
@@ -95,7 +101,7 @@ func getSelfSignedCertDir() string {
 	return dir
 }
 
-func get(url string, cert string) (content string, status int, err error) {
+func get(url string, cert string, proxyConfigCookie string) (content string, status int, err error) {
 	transport := &http.Transport{}
 	if strings.Contains(url, "https") {
 		if cert == "" {
@@ -112,6 +118,9 @@ func get(url string, cert string) (content string, status int, err error) {
 
 	client := &http.Client{Transport: transport}
 	request, err := http.NewRequest("GET", url, nil)
+	if proxyConfigCookie != "" {
+		request.AddCookie(&http.Cookie{Name: "proxyconfig", Value: encodeURIComponent(proxyConfigCookie)})
+	}
 	if err != nil {
 		return
 	}
@@ -240,6 +249,28 @@ func Test(t *testing.T) {
 					url:      "http://localhost:%d/proxy/another/a/b/c/gen_204",
 					status:   http.StatusNoContent,
 					response: "",
+				},
+			},
+		},
+		{
+			label: "Test Auto Proxy",
+			args: []string{
+				"--domain", "localhost",
+				"--root", fmt.Sprintf("%s/assets/domain/localhost/", currentDir),
+				"--auto-proxy", "true",
+			},
+			requests: []testRequest{
+				{
+					url:               "http://localhost:%d/proxy/gen_204",
+					status:            http.StatusNoContent,
+					proxyConfigCookie: "/proxy/gen_204:http://connectivitycheck.gstatic.com/generate_204;/proxy/another/a/b/c/gen_204:http://connectivitycheck.gstatic.com/generate_204",
+					response:          "",
+				},
+				{
+					url:               "http://localhost:%d/proxy/another/a/b/c/gen_204",
+					status:            http.StatusNoContent,
+					proxyConfigCookie: "/proxy/gen_204:http://connectivitycheck.gstatic.com/generate_204;/proxy/another/a/b/c/gen_204:http://connectivitycheck.gstatic.com/generate_204",
+					response:          "",
 				},
 			},
 		},

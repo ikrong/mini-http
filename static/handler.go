@@ -24,6 +24,8 @@ func (s *StaticServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	var target string
 	var code int
 	domain := s.serverConfig.CurrentDomain(r.Host)
+	// 检查自动代理配置
+	domain.readAutoProxyConfig(r)
 	// 检查代理配置
 	isProxy := handleProxy(domain, &w, r)
 	if isProxy {

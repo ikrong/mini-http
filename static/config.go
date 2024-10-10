@@ -50,6 +50,14 @@ func (c *ServerConfig) ParseFromArgs(args []string) {
 				proxy := append(*domain.Proxy, c.parseDomainProxy(args[i+1]))
 				domain.Proxy = &proxy
 				i += 1
+			case key == "--auto-proxy":
+				next := args[i+1]
+				if next == "true" || strings.HasPrefix(next, "--") {
+					domain.AutoProxy = true
+				}
+				if !strings.HasPrefix(next, "--") {
+					i += 1
+				}
 			case key == "--not-found":
 				domain.NotFound = args[i+1]
 				i += 1

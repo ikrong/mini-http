@@ -3,7 +3,10 @@ package static
 import (
 	"crypto/tls"
 	"fmt"
+	"net/http"
 	"net/http/httputil"
+	"net/url"
+	"strings"
 )
 
 type DomainProxy struct {
@@ -13,13 +16,14 @@ type DomainProxy struct {
 }
 
 type DomainConfig struct {
-	Domain   string
-	Cert     string
-	Key      string
-	Mode     string
-	Root     string
-	NotFound string
-	Proxy    *[]DomainProxy
+	Domain    string
+	Cert      string
+	Key       string
+	Mode      string
+	Root      string
+	NotFound  string
+	Proxy     *[]DomainProxy
+	AutoProxy bool
 }
 
 func NewDomain() (domain DomainConfig) {
@@ -71,4 +75,39 @@ func (d *DomainConfig) loadCertificate() (*tls.Certificate, error) {
 		return nil, err
 	}
 	return &cert, err
+}
+
+func (s *DomainConfig) readAutoProxyConfig(r *http.Request) {
+	if !s.AutoProxy {
+		return
+	}
+	rawCookie, _ := r.Cookie("proxyconfig")
+	cookie, _ := url.QueryUnescape(rawCookie.Value)
+	if cookie == "" {
+		return
+	}
+	proxyList := make([]DomainProxy, 0)
+	changed := false
+	for i, c := range strings.Split(cookie, ";") {
+		proxy := strings.Split(c, ":")
+		if len(proxy) < 2 {
+			continue
+		}
+		p := DomainProxy{
+			Url:   proxy[0],
+			Proxy: strings.Join(proxy[1:], ":"),
+		}
+		proxyList = append(proxyList, p)
+		if !changed {
+			if s.Proxy != nil && i < len(*s.Proxy) && (*s.Proxy)[i].Url == p.Url && (*s.Proxy)[i].Proxy == p.Proxy {
+				continue
+			} else {
+				changed = true
+			}
+		}
+	}
+	if changed {
+		s.Proxy = &proxyList
+		fmt.Println("AutoProxy Configuration Changed")
+	}
 }

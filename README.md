@@ -127,11 +127,33 @@ docker run -ti --rm --init \
    ikrong/mini-http \
    /serve \
      --domain localhost \
-     --proxy /api:https://example.com/api \
-     --skip-tls-verify true
+     --proxy /api:https://example.com/api
 ```
 
 > proxy 参数跨域配置请求路径 /api 下的所有路径全部重定向到 https://example.com/api 路径下
+
+8. 动态API代理
+
+有时候，服务启动后或许想要避免频繁地修改配置，可以开启动态代理，此时，访问页面的时候，需要对所有请求添加cookies，后端读取到配置，自动转发请求
+
+需要注意，这种代理方式最好在开发阶段使用，部署后，需要关闭动态代理，否则可能造成安全风险
+
+需要配置 cookies 的格式为
+
+cookie: proxyconfig=/api:https://example.com/api;/api2:https://example.com/api2
+
+格式和上面第7条参数格式一致，同时可以对多个路径配置并用分号隔开
+
+此时，容器启动可以使用如下方式
+
+```shell
+docker run -ti --rm --init \
+   -p 80:80 \
+   ikrong/mini-http \
+   /serve \
+     --domain localhost \
+     --auto-proxy
+```
 
 ## LICENSE
 
