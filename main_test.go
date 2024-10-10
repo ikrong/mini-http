@@ -20,11 +20,11 @@ var port = 32000
 var currentDir string
 
 type testRequest struct {
-	url               string
-	response          string
-	proxyConfigCookie string
-	status            int
-	allowErr          bool
+	url      string
+	response string
+	cookies  map[string]string
+	status   int
+	allowErr bool
 }
 
 type testCase struct {
@@ -73,7 +73,7 @@ func (c *testCase) Run(t *testing.T) {
 			if strings.Contains(request.url, "https") {
 				url = fmt.Sprintf(request.url, httpsPort)
 			}
-			content, status, err := get(url, c.ca, request.proxyConfigCookie)
+			content, status, err := get(url, c.ca, request.cookies)
 			if err != nil {
 				if request.allowErr {
 					continue
@@ -101,7 +101,7 @@ func getSelfSignedCertDir() string {
 	return dir
 }
 
-func get(url string, cert string, proxyConfigCookie string) (content string, status int, err error) {
+func get(url string, cert string, cookies map[string]string) (content string, status int, err error) {
 	transport := &http.Transport{}
 	if strings.Contains(url, "https") {
 		if cert == "" {
@@ -118,8 +118,8 @@ func get(url string, cert string, proxyConfigCookie string) (content string, sta
 
 	client := &http.Client{Transport: transport}
 	request, err := http.NewRequest("GET", url, nil)
-	if proxyConfigCookie != "" {
-		request.AddCookie(&http.Cookie{Name: "proxyconfig", Value: encodeURIComponent(proxyConfigCookie)})
+	for key, value := range cookies {
+		request.AddCookie(&http.Cookie{Name: key, Value: encodeURIComponent(value)})
 	}
 	if err != nil {
 		return
@@ -261,21 +261,25 @@ func Test(t *testing.T) {
 			},
 			requests: []testRequest{
 				{
-					url:               "http://localhost:%d/proxy/gen_204",
-					status:            http.StatusNoContent,
-					proxyConfigCookie: "/proxy/gen_204:http://connectivitycheck.gstatic.com/generate_204;/proxy/another/a/b/c/gen_204:http://connectivitycheck.gstatic.com/generate_204",
-					response:          "",
+					url:    "http://localhost:%d/proxy/gen_204",
+					status: http.StatusNoContent,
+					cookies: map[string]string{
+						"proxyconfig": "/proxy/gen_204:http://connectivitycheck.gstatic.com/generate_204;/proxy/another/a/b/c/gen_204:http://connectivitycheck.gstatic.com/generate_204",
+					},
+					response: "",
 				},
 				{
-					url:               "http://localhost:%d/proxy/another/a/b/c/gen_204",
-					status:            http.StatusNoContent,
-					proxyConfigCookie: "/proxy/gen_204:http://connectivitycheck.gstatic.com/generate_204;/proxy/another/a/b/c/gen_204:http://connectivitycheck.gstatic.com/generate_204",
-					response:          "",
+					url:    "http://localhost:%d/proxy/another/a/b/c/gen_204",
+					status: http.StatusNoContent,
+					cookies: map[string]string{
+						"proxyconfig": "/proxy/gen_204:http://connectivitycheck.gstatic.com/generate_204;/proxy/another/a/b/c/gen_204:http://connectivitycheck.gstatic.com/generate_204",
+					},
+					response: "",
 				},
 			},
 		},
 		{
-			label: "Test Auto Proxy",
+			label: "Test Auto Proxy Short",
 			args: []string{
 				"--domain", "localhost",
 				"--root", fmt.Sprintf("%s/assets/domain/localhost/", currentDir),
@@ -283,16 +287,47 @@ func Test(t *testing.T) {
 			},
 			requests: []testRequest{
 				{
-					url:               "http://localhost:%d/proxy/gen_204",
-					status:            http.StatusNoContent,
-					proxyConfigCookie: "/proxy/gen_204:http://connectivitycheck.gstatic.com/generate_204;/proxy/another/a/b/c/gen_204:http://connectivitycheck.gstatic.com/generate_204",
-					response:          "",
+					url:    "http://localhost:%d/proxy/gen_204",
+					status: http.StatusNoContent,
+					cookies: map[string]string{
+						"proxyconfig": "/proxy/gen_204:http://connectivitycheck.gstatic.com/generate_204;/proxy/another/a/b/c/gen_204:http://connectivitycheck.gstatic.com/generate_204",
+					},
+					response: "",
 				},
 				{
-					url:               "http://localhost:%d/proxy/another/a/b/c/gen_204",
-					status:            http.StatusNoContent,
-					proxyConfigCookie: "/proxy/gen_204:http://connectivitycheck.gstatic.com/generate_204;/proxy/another/a/b/c/gen_204:http://connectivitycheck.gstatic.com/generate_204",
-					response:          "",
+					url:    "http://localhost:%d/proxy/another/a/b/c/gen_204",
+					status: http.StatusNoContent,
+					cookies: map[string]string{
+						"proxyconfig": "/proxy/gen_204:http://connectivitycheck.gstatic.com/generate_204;/proxy/another/a/b/c/gen_204:http://connectivitycheck.gstatic.com/generate_204",
+					},
+					response: "",
+				},
+			},
+		},
+		{
+			label: "Test Auto Proxy Key",
+			args: []string{
+				"--domain", "localhost",
+				"--root", fmt.Sprintf("%s/assets/domain/localhost/", currentDir),
+				"--auto-proxy",
+				"--auto-proxy-key", "proxy",
+			},
+			requests: []testRequest{
+				{
+					url:    "http://localhost:%d/proxy/gen_204",
+					status: http.StatusNoContent,
+					cookies: map[string]string{
+						"proxy": "/proxy/gen_204:http://connectivitycheck.gstatic.com/generate_204;/proxy/another/a/b/c/gen_204:http://connectivitycheck.gstatic.com/generate_204",
+					},
+					response: "",
+				},
+				{
+					url:    "http://localhost:%d/proxy/another/a/b/c/gen_204",
+					status: http.StatusNoContent,
+					cookies: map[string]string{
+						"proxy": "/proxy/gen_204:http://connectivitycheck.gstatic.com/generate_204;/proxy/another/a/b/c/gen_204:http://connectivitycheck.gstatic.com/generate_204",
+					},
+					response: "",
 				},
 			},
 		},

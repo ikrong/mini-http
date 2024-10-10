@@ -16,14 +16,15 @@ type DomainProxy struct {
 }
 
 type DomainConfig struct {
-	Domain    string
-	Cert      string
-	Key       string
-	Mode      string
-	Root      string
-	NotFound  string
-	Proxy     *[]DomainProxy
-	AutoProxy bool
+	Domain       string
+	Cert         string
+	Key          string
+	Mode         string
+	Root         string
+	NotFound     string
+	Proxy        *[]DomainProxy
+	AutoProxy    bool
+	AutoProxyKey *string
 }
 
 func NewDomain() (domain DomainConfig) {
@@ -65,6 +66,9 @@ func (d *DomainConfig) print() {
 	if d.AutoProxy {
 		fmt.Println("\tAutoProxy: \tEnabled")
 	}
+	if d.AutoProxyKey != nil && *d.AutoProxyKey != "" {
+		fmt.Printf("\tAutoProxyKey: \t%s\n", *d.AutoProxyKey)
+	}
 	if d.Proxy != nil {
 		for _, proxy := range *d.Proxy {
 			fmt.Printf("\tProxy: \t%s --> %s\n", proxy.Url, proxy.Proxy)
@@ -84,7 +88,11 @@ func (s *DomainConfig) readAutoProxyConfig(r *http.Request) {
 	if !s.AutoProxy {
 		return
 	}
-	rawCookie, err := r.Cookie("proxyconfig")
+	key := "proxyconfig"
+	if s.AutoProxyKey != nil && *s.AutoProxyKey != "" {
+		key = *s.AutoProxyKey
+	}
+	rawCookie, err := r.Cookie(key)
 	if err != nil {
 		return
 	}

@@ -15,9 +15,11 @@ func RunServer(args []string) (err error) {
 	serverConfig := ServerConfig{
 		HTTPPort:      80,
 		HTTPSPort:     0,
+		AutoProxyKey:  "proxyconfig",
 		Domains:       []DomainConfig{},
 		DefaultDomain: NewDomain(),
 	}
+	serverConfig.DefaultDomain.AutoProxyKey = &serverConfig.AutoProxyKey
 	serverConfig.ParseFromArgs(args)
 
 	fmt.Println("Starting Mini HTTP...")
@@ -28,25 +30,27 @@ func RunServer(args []string) (err error) {
 
 	fmt.Printf("Listen TCP: ")
 	if serverConfig.HTTPPort > 0 {
-		fmt.Printf("%d ", serverConfig.HTTPPort)
+		fmt.Printf("HTTP(%d) ", serverConfig.HTTPPort)
 	}
 	if serverConfig.HTTPSPort > 0 {
-		fmt.Printf("%d ", serverConfig.HTTPSPort)
+		fmt.Printf("HTTPS(%d) ", serverConfig.HTTPSPort)
 	}
 	fmt.Println("")
 	serverConfig.PrintConfig()
 
-	ln, err := net.Listen("tcp", fmt.Sprintf(":%d", serverConfig.HTTPPort))
-	if err != nil {
-		log.Panic(err)
-		return
-	}
-
-	go func() {
-		if err := http.Serve(ln, handler); err != nil {
+	if serverConfig.HTTPPort > 0 {
+		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", serverConfig.HTTPPort))
+		if err != nil {
 			log.Panic(err)
+			return err
 		}
-	}()
+
+		go func() {
+			if err := http.Serve(ln, handler); err != nil {
+				log.Panic(err)
+			}
+		}()
+	}
 
 	if serverConfig.HTTPSPort > 0 {
 		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", serverConfig.HTTPSPort))

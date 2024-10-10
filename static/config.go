@@ -9,12 +9,14 @@ import (
 type ServerConfig struct {
 	HTTPPort      int
 	HTTPSPort     int
+	AutoProxyKey  string
 	Domains       []DomainConfig
 	DefaultDomain DomainConfig
 }
 
 func (c *ServerConfig) ParseFromArgs(args []string) {
 	var domain = NewDomain()
+	domain.AutoProxyKey = &c.AutoProxyKey
 	for i := 0; i < len(args); i++ {
 		if i+1 <= len(args) {
 			var key = args[i]
@@ -30,6 +32,7 @@ func (c *ServerConfig) ParseFromArgs(args []string) {
 					c.DefaultDomain = domain
 				}
 				domain = NewDomain()
+				domain.AutoProxyKey = &c.AutoProxyKey
 				domain.Domain = args[i+1]
 				i += 1
 			case key == "--cert":
@@ -61,6 +64,11 @@ func (c *ServerConfig) ParseFromArgs(args []string) {
 				if !strings.HasPrefix(nextKey, "--") {
 					i += 1
 				}
+			case key == "--auto-proxy-key":
+				if nextKey != "" {
+					c.AutoProxyKey = nextKey
+				}
+				i += 1
 			case key == "--not-found":
 				domain.NotFound = args[i+1]
 				i += 1
