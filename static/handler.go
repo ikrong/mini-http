@@ -165,7 +165,7 @@ func handleProxy(domain *DomainConfig, w *http.ResponseWriter, r *http.Request) 
 					pathIndex := strings.Index(path, proxyConfig.Url)
 					fullUrl := proxyConfig.Proxy + path[pathIndex+len(proxyConfig.Url):]
 					parsedUrl, err := url.Parse(fullUrl)
-					log.Printf("%s %s --> %s\n", domain.Domain, path, fullUrl)
+					log.Printf("%s %s --> %s\n", domain.label(), path, fullUrl)
 					if err == nil {
 						r.URL.Scheme = parsedUrl.Scheme
 						r.URL.Host = parsedUrl.Host
@@ -183,7 +183,7 @@ func handleProxy(domain *DomainConfig, w *http.ResponseWriter, r *http.Request) 
 			pathIndex := strings.Index(path, proxyConfig.Url)
 			fullUrl := proxyConfig.Proxy + path[pathIndex+len(proxyConfig.Url):]
 			fullUrl = strings.Replace(fullUrl, "http", "ws", 1)
-			log.Printf("%s %s --> %s\n", domain.Domain, path, fullUrl)
+			log.Printf("%s %s --> %s\n", domain.label(), path, fullUrl)
 			handleWebSocketProxy(fullUrl, *w, r)
 		} else {
 			proxyConfig.Instance.ServeHTTP(*w, r)
