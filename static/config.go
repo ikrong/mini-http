@@ -18,6 +18,10 @@ func (c *ServerConfig) ParseFromArgs(args []string) {
 	for i := 0; i < len(args); i++ {
 		if i+1 <= len(args) {
 			var key = args[i]
+			var nextKey = ""
+			if i+1 < len(args) {
+				nextKey = args[i+1]
+			}
 			switch {
 			case key == "--domain":
 				if !domain.isEmpty() {
@@ -51,14 +55,10 @@ func (c *ServerConfig) ParseFromArgs(args []string) {
 				domain.Proxy = &proxy
 				i += 1
 			case key == "--auto-proxy":
-				if i+1 >= len(args) {
-					continue
-				}
-				next := args[i+1]
-				if next == "true" || strings.HasPrefix(next, "--") {
+				if nextKey == "true" || strings.HasPrefix(nextKey, "--") || nextKey == "" {
 					domain.AutoProxy = true
 				}
-				if !strings.HasPrefix(next, "--") {
+				if !strings.HasPrefix(nextKey, "--") {
 					i += 1
 				}
 			case key == "--not-found":

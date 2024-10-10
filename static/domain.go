@@ -62,7 +62,9 @@ func (d *DomainConfig) print() {
 	if d.Key != "" {
 		fmt.Printf("\tKey: \t%s\n", d.Key)
 	}
-	if d.Proxy != nil {
+	if d.AutoProxy {
+		fmt.Println("\tAutoProxy: \tEnabled")
+	} else if d.Proxy != nil {
 		for _, proxy := range *d.Proxy {
 			fmt.Printf("\tProxy: \t%s\n", proxy.Url)
 		}

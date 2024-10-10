@@ -275,6 +275,28 @@ func Test(t *testing.T) {
 			},
 		},
 		{
+			label: "Test Auto Proxy",
+			args: []string{
+				"--domain", "localhost",
+				"--root", fmt.Sprintf("%s/assets/domain/localhost/", currentDir),
+				"--auto-proxy",
+			},
+			requests: []testRequest{
+				{
+					url:               "http://localhost:%d/proxy/gen_204",
+					status:            http.StatusNoContent,
+					proxyConfigCookie: "/proxy/gen_204:http://connectivitycheck.gstatic.com/generate_204;/proxy/another/a/b/c/gen_204:http://connectivitycheck.gstatic.com/generate_204",
+					response:          "",
+				},
+				{
+					url:               "http://localhost:%d/proxy/another/a/b/c/gen_204",
+					status:            http.StatusNoContent,
+					proxyConfigCookie: "/proxy/gen_204:http://connectivitycheck.gstatic.com/generate_204;/proxy/another/a/b/c/gen_204:http://connectivitycheck.gstatic.com/generate_204",
+					response:          "",
+				},
+			},
+		},
+		{
 			label: "Test Multiple Domains",
 			args: []string{
 				"--domain", "example.net",
