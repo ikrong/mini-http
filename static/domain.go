@@ -64,9 +64,10 @@ func (d *DomainConfig) print() {
 	}
 	if d.AutoProxy {
 		fmt.Println("\tAutoProxy: \tEnabled")
-	} else if d.Proxy != nil {
+	}
+	if d.Proxy != nil {
 		for _, proxy := range *d.Proxy {
-			fmt.Printf("\tProxy: \t%s\n", proxy.Url)
+			fmt.Printf("\tProxy: \t%s --> %s\n", proxy.Url, proxy.Proxy)
 		}
 	}
 }
@@ -83,7 +84,10 @@ func (s *DomainConfig) readAutoProxyConfig(r *http.Request) {
 	if !s.AutoProxy {
 		return
 	}
-	rawCookie, _ := r.Cookie("proxyconfig")
+	rawCookie, err := r.Cookie("proxyconfig")
+	if err != nil {
+		return
+	}
 	cookie, _ := url.QueryUnescape(rawCookie.Value)
 	if cookie == "" {
 		return
@@ -91,13 +95,13 @@ func (s *DomainConfig) readAutoProxyConfig(r *http.Request) {
 	proxyList := make([]DomainProxy, 0)
 	changed := false
 	for i, c := range strings.Split(cookie, ";") {
-		proxy := strings.Split(strings.TrimSpace(c), ":")
-		if len(proxy) < 2 {
+		pUrl, pProxy, exist := strings.Cut(strings.TrimSpace(c), ":")
+		if !exist {
 			continue
 		}
 		p := DomainProxy{
-			Url:   proxy[0],
-			Proxy: strings.Join(proxy[1:], ":"),
+			Url:   pUrl,
+			Proxy: pProxy,
 		}
 		proxyList = append(proxyList, p)
 		if !changed {

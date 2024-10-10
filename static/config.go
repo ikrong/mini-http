@@ -97,15 +97,15 @@ func (c *ServerConfig) PrintConfig() {
 	fmt.Println("")
 }
 
-func (s *ServerConfig) CurrentDomain(host string) (domain DomainConfig) {
+func (s *ServerConfig) CurrentDomain(host string) (domain *DomainConfig) {
 	hostInfos := strings.Split(host, ":")
-	domain = s.DefaultDomain
+	domain = &s.DefaultDomain
 	if len(s.Domains) > 0 {
-		domain = s.Domains[0]
+		domain = &s.Domains[0]
 	}
 	for i := 0; i < len(s.Domains); i++ {
 		if (s.Domains)[i].Domain == hostInfos[0] {
-			domain = s.Domains[i]
+			domain = &s.Domains[i]
 			return
 		}
 	}

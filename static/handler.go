@@ -143,7 +143,7 @@ func sendFile(w *http.ResponseWriter, file string, code int) {
 	}
 }
 
-func handleProxy(domain DomainConfig, w *http.ResponseWriter, r *http.Request) (isProxy bool) {
+func handleProxy(domain *DomainConfig, w *http.ResponseWriter, r *http.Request) (isProxy bool) {
 	proxies := domain.Proxy
 	isProxy = false
 	if proxies == nil {
