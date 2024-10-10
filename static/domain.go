@@ -89,7 +89,7 @@ func (s *DomainConfig) readAutoProxyConfig(r *http.Request) {
 	proxyList := make([]DomainProxy, 0)
 	changed := false
 	for i, c := range strings.Split(cookie, ";") {
-		proxy := strings.Split(c, ":")
+		proxy := strings.Split(strings.TrimSpace(c), ":")
 		if len(proxy) < 2 {
 			continue
 		}

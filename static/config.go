@@ -51,6 +51,9 @@ func (c *ServerConfig) ParseFromArgs(args []string) {
 				domain.Proxy = &proxy
 				i += 1
 			case key == "--auto-proxy":
+				if i+1 >= len(args) {
+					continue
+				}
 				next := args[i+1]
 				if next == "true" || strings.HasPrefix(next, "--") {
 					domain.AutoProxy = true
