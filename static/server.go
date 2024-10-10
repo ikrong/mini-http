@@ -38,6 +38,11 @@ func RunServer(args []string) (err error) {
 	fmt.Println("")
 	serverConfig.PrintConfig()
 
+	if serverConfig.HTTPPort == 0 && serverConfig.HTTPSPort == 0 {
+		log.Panic("no port specified")
+		return
+	}
+
 	if serverConfig.HTTPPort > 0 {
 		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", serverConfig.HTTPPort))
 		if err != nil {
