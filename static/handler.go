@@ -173,6 +173,9 @@ func handleProxy(domain *DomainConfig, w *http.ResponseWriter, r *http.Request) 
 						r.URL.Path = parsedUrl.Path
 					}
 				},
+				ErrorHandler: func(rw http.ResponseWriter, req *http.Request, err error) {
+					log.Error("%s %s --> %s", domain.label(), req.URL.Path, err.Error())
+				},
 			}
 			proxyConfig.Instance.Transport = &http.Transport{
 				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -198,7 +201,7 @@ func handleProxy(domain *DomainConfig, w *http.ResponseWriter, r *http.Request) 
 func handleWebSocketProxy(destURLStr string, w http.ResponseWriter, r *http.Request) error {
 	destURL, err := url.Parse(destURLStr)
 	if err != nil {
-		return fmt.Errorf("invalid destination URL %s", destURLStr)
+		return err
 	}
 
 	// WebSocket握手
@@ -208,7 +211,7 @@ func handleWebSocketProxy(destURLStr string, w http.ResponseWriter, r *http.Requ
 	}
 	clientConn, _, err := h.Hijack()
 	if err != nil {
-		return fmt.Errorf("WebSocket hijack failed: %v", err)
+		return err
 	}
 	defer clientConn.Close()
 
@@ -218,34 +221,30 @@ func handleWebSocketProxy(destURLStr string, w http.ResponseWriter, r *http.Requ
 	destReq.URL.RawPath = destURL.RawPath
 	destReq.RequestURI = destURL.RawPath
 
-	destPort := destURL.Port()
-
 	var destConn net.Conn
 	if destURL.Scheme == "wss" {
-		if destPort == "" {
-			destPort = "443"
+		wssUrl := destURL.Host
+		if destURL.Port() == "" {
+			wssUrl = fmt.Sprintf("%s:443", destURL.Host)
 		}
 		// 建立TLS连接
-		destConn, err = tls.Dial("tcp", fmt.Sprintf("%s:%s", destURL.Host, destPort), &tls.Config{
+		destConn, err = tls.Dial("tcp", wssUrl, &tls.Config{
 			InsecureSkipVerify: true, // 根据需要设置此项，跳过证书验证
 		})
 	} else {
-		if destPort == "" {
-			destPort = "80"
-		}
 		// 建立TCP连接
 		destConn, err = net.Dial("tcp", destURL.Host)
 	}
 
 	if err != nil {
-		return fmt.Errorf("failed to connect to destination server: %s", destURLStr)
+		return err
 	}
 	defer destConn.Close()
 
 	// 将客户端的请求写入目标服务器连接
 	err = destReq.Write(destConn)
 	if err != nil {
-		return fmt.Errorf("failed to write request to destination server: %s", destURLStr)
+		return err
 	}
 
 	// 开始转发消息

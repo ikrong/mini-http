@@ -1,44 +1,61 @@
 package log
 
 import (
+	"fmt"
+	"io"
 	syslog "log"
 	"os"
 )
 
-var (
-	log    = New()
+const (
 	red    = "\033[31m"
 	yellow = "\033[33m"
 	rest   = "\033[0m"
 )
 
-type Logger struct {
-	infoLogger  *syslog.Logger
-	warnLogger  *syslog.Logger
-	errorLogger *syslog.Logger
+var (
+	defaultLogger = New(os.Stdout, "", "")
+	warnLogger    = New(os.Stdout, yellow, rest)
+	errorLogger   = New(os.Stderr, red, rest)
+)
+
+func New(out *os.File, prefix string, suffix string) *syslog.Logger {
+	return syslog.New(&Writer{out: out, suffix: suffix}, prefix, syslog.LstdFlags)
+}
+
+type Writer struct {
+	out    io.Writer
+	suffix string
+}
+
+func (w *Writer) Write(p []byte) (n int, err error) {
+	if w.suffix != "" {
+		p = fmt.Append(p, w.suffix)
+	}
+	return w.out.Write(p)
 }
 
 func Info(format string, v ...any) {
-	log.infoLogger.Printf(format+"\n", v...)
+	defaultLogger.Printf(format+"\n", v...)
 }
 
 func Warn(format string, v ...any) {
-	log.warnLogger.Printf(format+rest+"\n", v...)
+	warnLogger.Printf(format+rest+"\n", v...)
 }
 
 func Error(format string, v ...any) {
-	log.errorLogger.Printf(format+rest+"\n", v...)
+	errorLogger.Printf(format+rest+"\n", v...)
 }
 
 func Panic(format string, v ...any) {
-	log.errorLogger.Printf(format+rest+"\n", v...)
+	errorLogger.Printf(format+rest+"\n", v...)
 	os.Exit(1)
 }
 
-func New() (log *Logger) {
-	log = new(Logger)
-	log.infoLogger = syslog.New(os.Stdout, "", syslog.LstdFlags)
-	log.errorLogger = syslog.New(os.Stderr, red+"", syslog.LstdFlags)
-	log.warnLogger = syslog.New(os.Stdout, yellow+"", syslog.LstdFlags)
-	return
+func InfoLogger() *syslog.Logger {
+	return defaultLogger
+}
+
+func ErrorLogger() *syslog.Logger {
+	return errorLogger
 }

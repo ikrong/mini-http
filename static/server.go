@@ -15,7 +15,6 @@ func RunServer(args []string) (err error) {
 	serverConfig := ServerConfig{
 		HTTPPort:      80,
 		HTTPSPort:     0,
-		AutoProxyKey:  "proxyconfig",
 		Domains:       []DomainConfig{},
 		DefaultDomain: NewDomain(),
 	}
@@ -51,7 +50,11 @@ func RunServer(args []string) (err error) {
 		}
 
 		go func() {
-			if err := http.Serve(ln, handler); err != nil {
+			server := http.Server{
+				Handler:  handler,
+				ErrorLog: log.ErrorLogger(),
+			}
+			if err := server.Serve(ln); err != nil {
 				log.Panic(err.Error())
 			}
 		}()
@@ -95,26 +98,30 @@ func RunServer(args []string) (err error) {
 			},
 		}
 		go func() {
-			if err = http.Serve(&TLSServerListener{
+			tlsServer := http.Server{
+				Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					if r.TLS == nil {
+						u := url.URL{
+							Scheme:   "https",
+							Opaque:   r.URL.Opaque,
+							User:     r.URL.User,
+							Host:     r.Host,
+							Path:     r.URL.Path,
+							RawQuery: r.URL.RawQuery,
+							Fragment: r.URL.Fragment,
+						}
+						// 如果通过http访问，则自动重定向到https
+						http.Redirect(w, r, u.String(), http.StatusMovedPermanently)
+					} else {
+						handler.ServeHTTP(w, r)
+					}
+				}),
+				ErrorLog: log.ErrorLogger(),
+			}
+			if err = tlsServer.Serve(&TLSServerListener{
 				Listener:  ln,
 				TlsConfig: tlsConfig,
-			}, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.TLS == nil {
-					u := url.URL{
-						Scheme:   "https",
-						Opaque:   r.URL.Opaque,
-						User:     r.URL.User,
-						Host:     r.Host,
-						Path:     r.URL.Path,
-						RawQuery: r.URL.RawQuery,
-						Fragment: r.URL.Fragment,
-					}
-					// 如果通过http访问，则自动重定向到https
-					http.Redirect(w, r, u.String(), http.StatusMovedPermanently)
-				} else {
-					handler.ServeHTTP(w, r)
-				}
-			})); err != nil {
+			}); err != nil {
 				log.Panic(err.Error())
 			}
 		}()

@@ -3,6 +3,7 @@ package static
 import (
 	"crypto/tls"
 	"fmt"
+	"mini-http/log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -122,6 +123,6 @@ func (s *DomainConfig) readAutoProxyConfig(r *http.Request) {
 	}
 	if changed {
 		s.Proxy = &proxyList
-		fmt.Println("AutoProxy Configuration Changed")
+		log.Info("AutoProxy Configuration Changed")
 	}
 }
