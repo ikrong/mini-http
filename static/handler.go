@@ -4,8 +4,8 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
-	"log"
 	"mime"
+	"mini-http/log"
 	"net"
 	"net/http"
 	"net/http/httputil"
@@ -31,7 +31,7 @@ func (s *StaticServerHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	if isProxy {
 		return
 	}
-	log.Printf("%s %s\n", domain.label(), r.URL.Path)
+	log.Info("%s %s", domain.label(), r.URL.Path)
 	target, code = getSatisfiedFile(&findFileConfig{
 		Root: domain.Root,
 		Path: r.URL.Path,
@@ -165,7 +165,7 @@ func handleProxy(domain *DomainConfig, w *http.ResponseWriter, r *http.Request) 
 					pathIndex := strings.Index(path, proxyConfig.Url)
 					fullUrl := proxyConfig.Proxy + path[pathIndex+len(proxyConfig.Url):]
 					parsedUrl, err := url.Parse(fullUrl)
-					log.Printf("%s %s --> %s\n", domain.label(), path, fullUrl)
+					log.Info("%s %s --> %s", domain.label(), path, fullUrl)
 					if err == nil {
 						r.URL.Scheme = parsedUrl.Scheme
 						r.URL.Host = parsedUrl.Host
@@ -183,8 +183,11 @@ func handleProxy(domain *DomainConfig, w *http.ResponseWriter, r *http.Request) 
 			pathIndex := strings.Index(path, proxyConfig.Url)
 			fullUrl := proxyConfig.Proxy + path[pathIndex+len(proxyConfig.Url):]
 			fullUrl = strings.Replace(fullUrl, "http", "ws", 1)
-			log.Printf("%s %s --> %s\n", domain.label(), path, fullUrl)
-			handleWebSocketProxy(fullUrl, *w, r)
+			log.Info("%s %s --> %s", domain.label(), path, fullUrl)
+			err := handleWebSocketProxy(fullUrl, *w, r)
+			if err != nil {
+				log.Error("%s %s", domain.label(), err)
+			}
 		} else {
 			proxyConfig.Instance.ServeHTTP(*w, r)
 		}
@@ -192,23 +195,20 @@ func handleProxy(domain *DomainConfig, w *http.ResponseWriter, r *http.Request) 
 	return
 }
 
-func handleWebSocketProxy(destURLStr string, w http.ResponseWriter, r *http.Request) {
+func handleWebSocketProxy(destURLStr string, w http.ResponseWriter, r *http.Request) error {
 	destURL, err := url.Parse(destURLStr)
 	if err != nil {
-		http.Error(w, "Invalid destination URL", http.StatusInternalServerError)
-		return
+		return fmt.Errorf("invalid destination URL %s", destURLStr)
 	}
 
 	// WebSocket握手
 	h, ok := w.(http.Hijacker)
 	if !ok {
-		http.Error(w, "WebSocket upgrade failed", http.StatusInternalServerError)
-		return
+		return fmt.Errorf("WebSocket upgrade failed: %s", destURLStr)
 	}
 	clientConn, _, err := h.Hijack()
 	if err != nil {
-		http.Error(w, "Failed to hijack connection", http.StatusInternalServerError)
-		return
+		return fmt.Errorf("WebSocket hijack failed: %v", err)
 	}
 	defer clientConn.Close()
 
@@ -238,19 +238,19 @@ func handleWebSocketProxy(destURLStr string, w http.ResponseWriter, r *http.Requ
 	}
 
 	if err != nil {
-		http.Error(w, "Failed to connect to destination server", http.StatusInternalServerError)
-		return
+		return fmt.Errorf("failed to connect to destination server: %s", destURLStr)
 	}
 	defer destConn.Close()
 
 	// 将客户端的请求写入目标服务器连接
 	err = destReq.Write(destConn)
 	if err != nil {
-		http.Error(w, "Failed to write request to destination server", http.StatusInternalServerError)
-		return
+		return fmt.Errorf("failed to write request to destination server: %s", destURLStr)
 	}
 
 	// 开始转发消息
 	go io.Copy(destConn, clientConn)
 	io.Copy(clientConn, destConn)
+
+	return nil
 }

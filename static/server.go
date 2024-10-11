@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
-	"log"
+	"mini-http/log"
 	"net"
 	"net/http"
 	"net/url"
@@ -46,13 +46,13 @@ func RunServer(args []string) (err error) {
 	if serverConfig.HTTPPort > 0 {
 		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", serverConfig.HTTPPort))
 		if err != nil {
-			log.Panic(err)
+			log.Panic(err.Error())
 			return err
 		}
 
 		go func() {
 			if err := http.Serve(ln, handler); err != nil {
-				log.Panic(err)
+				log.Panic(err.Error())
 			}
 		}()
 	}
@@ -60,7 +60,7 @@ func RunServer(args []string) (err error) {
 	if serverConfig.HTTPSPort > 0 {
 		ln, err := net.Listen("tcp", fmt.Sprintf(":%d", serverConfig.HTTPSPort))
 		if err != nil {
-			log.Panic(err)
+			log.Panic(err.Error())
 		}
 		var certStore sync.Map
 		var certMutex sync.Mutex
@@ -115,7 +115,7 @@ func RunServer(args []string) (err error) {
 					handler.ServeHTTP(w, r)
 				}
 			})); err != nil {
-				log.Panic(err)
+				log.Panic(err.Error())
 			}
 		}()
 	}
