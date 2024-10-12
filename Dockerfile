@@ -13,7 +13,7 @@ RUN set -eux; \
 		*) [ -z "$VARIANT" ] ;; \
 	esac; \
 	go env | grep -E 'OS=|ARCH=|ARM=|AMD64='; \
-    CGO_ENABLED=0 go build -ldflags "-s -w" -o serve main.go
+    CGO_ENABLED=0 go build -ldflags "-s -w" -trimpath -o serve main.go
 
 RUN ./minify.sh
 
