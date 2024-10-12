@@ -36,19 +36,19 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 }
 
 func Info(format string, v ...any) {
-	defaultLogger.Printf(format+"\n", v...)
+	defaultLogger.Printf(format, v...)
 }
 
 func Warn(format string, v ...any) {
-	warnLogger.Printf(format+rest+"\n", v...)
+	warnLogger.Printf(format, v...)
 }
 
 func Error(format string, v ...any) {
-	errorLogger.Printf(format+rest+"\n", v...)
+	errorLogger.Printf(format, v...)
 }
 
 func Panic(format string, v ...any) {
-	errorLogger.Printf(format+rest+"\n", v...)
+	errorLogger.Printf(format, v...)
 	os.Exit(1)
 }
 

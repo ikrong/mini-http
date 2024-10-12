@@ -101,20 +101,16 @@ func (s *DomainConfig) readAutoProxyConfig(r *http.Request) {
 	if cookie == "" {
 		return
 	}
-	proxyList := make([]DomainProxy, 0)
+	proxyMap := map[string]string{}
 	changed := false
 	for i, c := range strings.Split(cookie, ";") {
 		pUrl, pProxy, exist := strings.Cut(strings.TrimSpace(c), ":")
 		if !exist {
 			continue
 		}
-		p := DomainProxy{
-			Url:   pUrl,
-			Proxy: pProxy,
-		}
-		proxyList = append(proxyList, p)
+		proxyMap[pUrl] = pProxy
 		if !changed {
-			if s.Proxy != nil && i < len(*s.Proxy) && (*s.Proxy)[i].Url == p.Url && (*s.Proxy)[i].Proxy == p.Proxy {
+			if s.Proxy != nil && i < len(*s.Proxy) && (*s.Proxy)[i].Url == pUrl && (*s.Proxy)[i].Proxy == pProxy {
 				continue
 			} else {
 				changed = true
@@ -122,6 +118,13 @@ func (s *DomainConfig) readAutoProxyConfig(r *http.Request) {
 		}
 	}
 	if changed {
+		proxyList := make([]DomainProxy, 0)
+		for url, proxy := range proxyMap {
+			proxyList = append(proxyList, DomainProxy{
+				Url:   url,
+				Proxy: proxy,
+			})
+		}
 		s.Proxy = &proxyList
 		log.Info("AutoProxy Configuration Changed")
 	}
