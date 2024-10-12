@@ -176,9 +176,9 @@ func handleProxy(domain *DomainConfig, w *http.ResponseWriter, r *http.Request) 
 				ErrorHandler: func(rw http.ResponseWriter, req *http.Request, err error) {
 					log.Error("%s %s --> %s", domain.label(), req.URL.Path, err.Error())
 				},
-			}
-			proxyConfig.Instance.Transport = &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+				Transport: &http.Transport{
+					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+				},
 			}
 		}
 		if strings.ToLower(r.Header.Get("connection")) == "upgrade" || strings.ToLower(r.Header.Get("upgrade")) == "websocket" {
