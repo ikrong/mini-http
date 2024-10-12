@@ -49,6 +49,7 @@ func usage() {
 		{name: "mode", description: "Set 'history' enable Single Page Routing", defaultValue: "", valueType: "string"},
 		{name: "proxy", description: "Set proxy api", defaultValue: "", valueType: "string"},
 		{name: "auto-proxy", description: "Enable auto proxy api", defaultValue: "", valueType: "boolean"},
+		{name: "auto-proxy-key", description: "Custom auto proxy key", defaultValue: "proxyconfig", valueType: "string"},
 		{name: "not-found", description: "Custom 404 page", defaultValue: "/404.html", valueType: "string"},
 	}
 	for i := 0; i < len(flags); i++ {
