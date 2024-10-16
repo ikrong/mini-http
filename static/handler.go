@@ -154,6 +154,7 @@ func handleProxy(domain *DomainConfig, w *http.ResponseWriter, r *http.Request) 
 	for i := 0; i < len(*proxies); i++ {
 		if strings.Index(path, (*proxies)[i].Url) == 0 {
 			proxyConfig = &(*proxies)[i]
+			break
 		}
 	}
 	if proxyConfig != nil {
