@@ -164,7 +164,11 @@ func handleProxy(domain *DomainConfig, w *http.ResponseWriter, r *http.Request) 
 				Director: func(r *http.Request) {
 					path := r.URL.Path
 					pathIndex := strings.Index(path, proxyConfig.Url)
-					fullUrl := proxyConfig.Proxy + path[pathIndex+len(proxyConfig.Url):]
+					redirectPath := path[pathIndex+len(proxyConfig.Url):]
+					if !strings.HasPrefix(redirectPath, "/") {
+						redirectPath = "/" + redirectPath
+					}
+					fullUrl := proxyConfig.Proxy + redirectPath
 					parsedUrl, err := url.Parse(fullUrl)
 					log.Info("%s %s --> %s", domain.label(), path, fullUrl)
 					if err == nil {
