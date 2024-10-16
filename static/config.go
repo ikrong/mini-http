@@ -92,7 +92,7 @@ func (c *ServerConfig) ParseFromArgs(args []string) {
 
 func (c *ServerConfig) parseDomainProxy(cmd string) DomainProxy {
 	index := strings.Index(cmd, ":")
-	return DomainProxy{Url: cmd[0:index], Proxy: strings.TrimSuffix(cmd[index+1:], "/")}
+	return DomainProxy{Url: cmd[0:index], Proxy: cmd[index+1:]}
 }
 
 func (c *ServerConfig) PrintConfig() {
