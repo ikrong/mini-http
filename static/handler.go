@@ -176,6 +176,7 @@ func handleProxy(domain *DomainConfig, w *http.ResponseWriter, r *http.Request) 
 				},
 				ErrorHandler: func(rw http.ResponseWriter, req *http.Request, err error) {
 					log.Error("%s %s --> %s", domain.label(), req.URL.Path, err.Error())
+					rw.WriteHeader(500)
 				},
 				Transport: &http.Transport{
 					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
